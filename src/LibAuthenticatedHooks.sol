@@ -1,0 +1,139 @@
+import { ECDSA } from "solady/utils/ECDSA.sol";
+import { Call } from "./ICOWAuthHook.sol";
+
+interface IERC1271 {
+    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4);
+}
+
+library LibAuthenticatedHooks {
+    /// @dev keccak256("Call(address target,uint256 value,bytes callData,bool allowFailure)")
+    bytes32 internal constant CALL_TYPE_HASH = 0x7a0eb730f016d74a17b2e060afce75f3aabe83983b62d9c6cdcd090013b536cd;
+    /// @dev keccak256("ExecuteHooks(Call[] calls,bytes32 nonce)Call(address target,uint256 value,bytes callData,bool allowFailure)")
+    bytes32 internal constant EXECUTE_HOOKS_TYPE_HASH =
+        0xaf2bd84ba6040bf9f1016009cf132bc2c92f27c4bcaef806c80db6ba08408fd3;
+    /// @dev magic value to be returned for valid signatures
+    bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
+
+    function authenticateHooks(
+        Call[] calldata calls,
+        bytes32 nonce,
+        bytes32 r,
+        bytes32 s,
+        uint8 v,
+        bytes32 domainSeparator
+    ) internal view returns (bool, address) {
+        bytes32 toSign = hashToSign(calls, nonce, domainSeparator);
+
+        // smart contract signer
+        if (v == 0) {
+            address account = address(uint160(uint256(r)));
+            bool isAuthorized = IERC1271(account).isValidSignature(toSign, abi.encode(s)) == MAGIC_VALUE_1271;
+            return (isAuthorized, account);
+        }
+        // eoa signer
+        else {
+            address recovered = ECDSA.recover(toSign, v, r, s);
+            return (true, recovered);
+        }
+    }
+
+    function hashToSign(Call[] calldata calls, bytes32 nonce, bytes32 domainSeparator)
+        internal
+        pure
+        returns (bytes32 _toSign)
+    {
+        bytes32 messageHash = executeHooksMessageHash(calls, nonce);
+
+        assembly {
+            let freeMemoryPointer := mload(0x40)
+
+            mstore(0x00, 0x1901)
+            mstore(0x20, domainSeparator)
+            mstore(0x40, messageHash)
+
+            _toSign := keccak256(0x1e, 0x42)
+
+            // restore free memory pointer
+            mstore(0x40, freeMemoryPointer)
+        }
+    }
+
+    function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce) internal pure returns (bytes32 hash) {
+        // return keccak256(abi.encode(EXECUTE_HOOKS_HASH, ))
+        bytes32 callshash = callsHash(calls);
+
+        assembly {
+            let before := mload(0x40)
+            mstore(0x00, EXECUTE_HOOKS_TYPE_HASH)
+            mstore(0x20, callshash)
+            mstore(0x40, nonce)
+            hash := keccak256(0x00, 0x60)
+
+            // restore free memory pointer
+            mstore(0x40, before)
+        }
+    }
+
+    function callsHash(Call[] calldata calls) internal pure returns (bytes32 _callsHash) {
+        bytes32[] memory hashes;
+        uint256 nCalls = calls.length;
+        /// @solidity memory-safe-assembly
+        assembly {
+            hashes := mload(0x40)
+            mstore(hashes, nCalls)
+        }
+
+        for (uint256 i = 0; i < nCalls; i++) {
+            hashes[i] = callHash(calls[i]);
+        }
+        /// @solidity memory-safe-assembly
+        assembly {
+            _callsHash := keccak256(add(hashes, 0x20), mul(nCalls, 0x20))
+            mstore(0x40, hashes)
+        }
+    }
+
+    function callHash(Call memory cll) internal pure returns (bytes32 _callHash) {
+        address target = cll.target;
+        uint256 value = cll.value;
+        bytes32 callDataHash = keccak256(cll.callData);
+        bool allowFailure = cll.allowFailure;
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            let freeMemoryPointer := mload(0x40)
+            let firstSlot := mload(0x80)
+
+            mstore(0x00, CALL_TYPE_HASH)
+            mstore(0x20, target)
+            mstore(0x40, value)
+            mstore(0x60, callDataHash)
+            mstore(0x80, allowFailure)
+            _callHash := keccak256(0x00, 160)
+
+            // restore free memory pointer
+            mstore(0x40, freeMemoryPointer)
+            // restore 0 slot
+            mstore(0x60, 0x00)
+            // restore first slot
+            mstore(0x80, firstSlot)
+        }
+    }
+
+    function executeCalls(Call[] calldata calls) internal {
+        for (uint256 i = 0; i < calls.length;) {
+            Call memory call = calls[i];
+            (bool success, bytes memory ret) = call.target.call{ value: call.value }(call.callData);
+            if (!success && !call.allowFailure) {
+                // bubble up the revert message
+                assembly {
+                    revert(add(ret, 0x20), mload(ret))
+                }
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+}
