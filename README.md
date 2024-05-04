@@ -1,66 +1,34 @@
-## Foundry
+# `cow-shed`
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+[`COWShed`](./src/COWShed.sol) is a user owned ERC1967 proxy deployed at a determininstic
+address using `create2` with the user address as the `salt`.
 
-Foundry consists of:
+This deterministic deployment allows users to set the proxy address as the `receiver` for
+cowswap orders with pre/post hooks. At the first execution of hooks, the proxy gets deployed
+for the user and the hooks are executed.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+User signs a EIP712 message for the pre/post hooks which gets validated and only user signed
+hooks are executed on the user's proxy. This allows users to confidently perform permissioned
+actions in the hooks like:
+1. transferring assets from the proxy to someone else.
+2. use the proxy to add collateral or repay debt on a maker CDP or a aave debt position, etc.
 
-## Documentation
+The signed message type looks like:
+```
+ExecuteHooks(Call[] calls,bytes32 nonce)
+Call(address target,uint256 value,bytes callData,bool allowFailure)
+```
 
-https://book.getfoundry.sh/
+The nonces are not constrained to be sequential, so multiple orders with hooks can be executed
+out of order, but still validated.
+
+The system also support smart contracts. In case of contracts, EIP1271 signatures are used to
+authenticate the signed hooks.
 
 ## Usage
 
-### Build
+### Tests
 
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+```bash
+forge test -vvv
 ```
