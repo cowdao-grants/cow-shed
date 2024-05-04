@@ -44,7 +44,7 @@ library LibAuthenticatedHooks {
     {
         bytes32 messageHash = executeHooksMessageHash(calls, nonce);
 
-        assembly {
+        assembly ("memory-safe") {
             let freeMemoryPointer := mload(0x40)
 
             mstore(0x00, 0x1901)
@@ -59,10 +59,9 @@ library LibAuthenticatedHooks {
     }
 
     function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce) internal pure returns (bytes32 hash) {
-        // return keccak256(abi.encode(EXECUTE_HOOKS_HASH, ))
         bytes32 callshash = callsHash(calls);
 
-        assembly {
+        assembly ("memory-safe") {
             let before := mload(0x40)
             mstore(0x00, EXECUTE_HOOKS_TYPE_HASH)
             mstore(0x20, callshash)
@@ -75,32 +74,25 @@ library LibAuthenticatedHooks {
     }
 
     function callsHash(Call[] calldata calls) internal pure returns (bytes32 _callsHash) {
-        bytes32[] memory hashes;
         uint256 nCalls = calls.length;
-        /// @solidity memory-safe-assembly
-        assembly {
-            hashes := mload(0x40)
-            mstore(hashes, nCalls)
-        }
+        bytes32[] memory hashes = new bytes32[](nCalls);
 
         for (uint256 i = 0; i < nCalls; i++) {
             hashes[i] = callHash(calls[i]);
         }
-        /// @solidity memory-safe-assembly
-        assembly {
+
+        assembly ("memory-safe") {
             _callsHash := keccak256(add(hashes, 0x20), mul(nCalls, 0x20))
-            mstore(0x40, hashes)
         }
     }
 
-    function callHash(Call memory cll) internal pure returns (bytes32 _callHash) {
+    function callHash(Call calldata cll) internal pure returns (bytes32 _callHash) {
         address target = cll.target;
         uint256 value = cll.value;
         bytes32 callDataHash = keccak256(cll.callData);
         bool allowFailure = cll.allowFailure;
 
-        /// @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             let freeMemoryPointer := mload(0x40)
             let firstSlot := mload(0x80)
 

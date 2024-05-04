@@ -17,6 +17,10 @@ contract CalldataProxy {
     function callsHash(Call[] calldata calls) external pure returns (bytes32) {
         return LibAuthenticatedHooks.callsHash(calls);
     }
+
+    function callHash(Call calldata cll) external pure returns (bytes32) {
+        return LibAuthenticatedHooks.callHash(cll);
+    }
 }
 
 contract LibAuthenticatedHooksTest is Test {
@@ -36,17 +40,17 @@ contract LibAuthenticatedHooksTest is Test {
         assertEq(hashToSign, 0xf5c0edcb586b37c8dfdbdf32b25ce7b151e5ba4ae2c67d42d15247b83352edb5, "!hashToSign");
     }
 
-    function testCallHash() external pure {
+    function testCallHash() external view {
         Call memory call1 = Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false });
         Call memory call2 = Call({ target: address(0), callData: hex"00112233", value: 200000000, allowFailure: false });
 
         assertEq(
-            LibAuthenticatedHooks.callHash(call1),
+            calldataProxy.callHash(call1),
             0x65ae2bbeaa5da85dd45f563d3feef6f9aea38138474bb748b142d193f1b6cace,
             "!callHash call1"
         );
         assertEq(
-            LibAuthenticatedHooks.callHash(call2),
+            calldataProxy.callHash(call2),
             0x8cd5bdd9f36a3fa11a240f1607a4de06fec37e2e8d581985e540a974b28b2d8d,
             "!callHash call2"
         );
