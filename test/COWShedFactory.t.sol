@@ -1,14 +1,10 @@
 import { COWShedFactory } from "src/COWShedFactory.sol";
 import { Vm, Test } from "forge-std/Test.sol";
 import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
-import { CalldataProxy } from "./LibAuthenticatedHooks.t.sol";
 import { ADMIN_STORAGE_SLOT, COWShed } from "src/COWShed.sol";
+import { BaseTest } from "./BaseTest.sol";
 
-contract COWShedFactoryTest is Test {
-    CalldataProxy cproxy = new CalldataProxy();
-    COWShed cowshed = new COWShed();
-    COWShedFactory factory = new COWShedFactory(address(cowshed));
-
+contract COWShedFactoryTest is BaseTest {
     function testExecuteHooks() external {
         Vm.Wallet memory wallet = vm.createWallet("testWallet");
         address addr1 = makeAddr("addr1");
@@ -39,5 +35,28 @@ contract COWShedFactoryTest is Test {
 
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
         factory.executeHooks(calls, nonce, r, s, v);
+    }
+
+    function testDomainSeparators() external {
+        Vm.Wallet memory user1 = vm.createWallet("user1");
+        Vm.Wallet memory user2 = vm.createWallet("user2");
+
+        _initializeUserProxy(user1);
+        _initializeUserProxy(user2);
+
+        COWShed proxy1 = COWShed(payable(factory.proxyOf(user1.addr)));
+        COWShed proxy2 = COWShed(payable(factory.proxyOf(user2.addr)));
+
+        vm.label(address(proxy1), "proxy1");
+        vm.label(address(proxy2), "proxy2");
+
+        bytes32 domainSeparator1 = proxy1.domainSeparator();
+        // emit log_uint(address(proxy2).code.length);
+        // bytes32 domainSeparator2 = proxy2.domainSeparator();
+
+        // assertTrue(
+        //     proxy1.domainSeparator() != proxy2.domainSeparator(),
+        //     "different proxies should have different domain separators"
+        // );
     }
 }

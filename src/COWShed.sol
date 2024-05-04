@@ -55,7 +55,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _;
     }
 
-    function initialize(address implementation, address admin, Call[] calldata calls) external {
+    function initialize(address implementation, address admin, address factory, Call[] calldata calls) external {
         if (_state().initialized) {
             revert AlreadyInitialized();
         }
@@ -69,6 +69,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         emit Upgraded(implementation);
 
         LibAuthenticatedHooks.executeCalls(calls);
+        this.updateTrustedExecutor(factory, true);
     }
 
     function executeHooks(Call[] calldata calls, bytes32 nonce, bytes32 r, bytes32 s, uint8 v) external {
@@ -83,6 +84,14 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @custom:todo doesn't make sense to commit some other contract's sigs nonce here.
     function trustedExecuteHooks(Call[] calldata calls) external onlyTrustedExecutor {
         LibAuthenticatedHooks.executeCalls(calls);
+    }
+
+    function trustedExecutors(address who) external view returns (bool) {
+        return _state().trustedExecutors[who];
+    }
+
+    function nonces(bytes32 nonce) external view returns (bool) {
+        return _state().nonces[nonce];
     }
 
     function updateTrustedExecutor(address who, bool authorized) external {
@@ -144,6 +153,10 @@ contract COWShedProxy is COWShedStorage {
             // bubble up the revert
             assembly {
                 revert(add(ret, 0x20), mload(ret))
+            }
+        } else {
+            assembly {
+                return(add(ret, 0x20), mload(ret))
             }
         }
     }

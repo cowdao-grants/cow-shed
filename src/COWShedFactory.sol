@@ -33,7 +33,7 @@ contract COWShedFactory is EIP712 {
         address proxy = proxyOf(recovered);
         if (proxy.code.length == 0) {
             COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(recovered))) }();
-            COWShed(payable(address(newProxy))).initialize(implementation, recovered, calls);
+            COWShed(payable(address(newProxy))).initialize(implementation, recovered, address(this), calls);
         } else {
             COWShed(payable(proxy)).trustedExecuteHooks(calls);
         }

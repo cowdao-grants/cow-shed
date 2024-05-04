@@ -1,7 +1,7 @@
 import { COWShedProxy, COWShed, Call, IMPLEMENTATION_STORAGE_SLOT, ADMIN_STORAGE_SLOT } from "src/COWShed.sol";
-import { Test } from "forge-std/Test.sol";
+import { BaseTest } from "./BaseTest.sol";
 
-contract COWShedProxyTest is Test {
+contract COWShedProxyTest is BaseTest {
     function testProxyInitialization() external {
         COWShed cowshed = new COWShed();
 
@@ -12,17 +12,11 @@ contract COWShedProxyTest is Test {
         vm.expectRevert(COWShedProxy.InvalidInitialization.selector);
         COWShed(payable(address(proxy))).trustedExecuteHooks(new Call[](0));
 
-        COWShed(payable(address(proxy))).initialize(address(cowshed), address(this), new Call[](0));
+        COWShed(payable(address(proxy))).initialize(address(cowshed), address(this), address(factory), new Call[](0));
         assertAdminAndImpl(address(proxy), address(this), address(cowshed));
 
-        address(proxy).call{ value: 1 ether }("");
-    }
-
-    function assertAdminAndImpl(address proxy, address expectedAdmin, address expectedImpl) internal {
-        address actualAdmin = address(uint160(uint256(vm.load(proxy, ADMIN_STORAGE_SLOT))));
-        address actualImpl = address(uint160(uint256(vm.load(proxy, IMPLEMENTATION_STORAGE_SLOT))));
-
-        assertEq(actualAdmin, expectedAdmin, "!admin");
-        assertEq(actualImpl, expectedImpl, "!impl");
+        // shouldnt initialize again
+        vm.expectRevert(COWShed.AlreadyInitialized.selector);
+        COWShed(payable(address(proxy))).initialize(address(cowshed), address(this), address(factory), new Call[](0));
     }
 }
