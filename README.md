@@ -1,5 +1,7 @@
 # `cow-shed`
 
+![`cow-shed`](https://i.imgur.com/n7GUxFC.png)
+
 [`COWShed`](./src/COWShed.sol) is a user owned ERC1967 proxy deployed at a determininstic
 address using `create2` with the user address as the `salt`.
 
