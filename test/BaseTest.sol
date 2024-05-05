@@ -86,22 +86,25 @@ contract BaseTest is Test {
     function _initializeUserProxy(Vm.Wallet memory _wallet) internal returns (bytes memory signature) {
         Call[] memory calls = new Call[](0);
         bytes32 nonce = "nonce1";
-        bytes32 digest = cproxy.hashToSign(calls, nonce, factory.domainSeparator());
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, digest);
-        signature = abi.encodePacked(r, s, v);
 
-        factory.executeHooks(calls, nonce, _wallet.addr, signature);
         address proxyAddress = factory.proxyOf(_wallet.addr);
+        bytes memory signature = _signForProxy(calls, nonce, _wallet);
+        factory.executeHooks(calls, nonce, _wallet.addr, signature);
         assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
         assertAdminAndImpl(proxyAddress, _wallet.addr, address(cowshedImpl));
+        assertEq(
+            COWShed(payable(proxyAddress)).domainSeparator(),
+            _computeDomainSeparatorForProxy(proxyAddress),
+            "computed domain separator is incorrect"
+        );
     }
 
     function _initializeSmartWalletProxy(address _smartWallet) internal returns (bytes memory signature) {
         Call[] memory calls = new Call[](0);
         bytes32 nonce = "nonce1";
-        signature = _signWithSmartWalletForFactory(calls, nonce, smartWalletAddr);
-        factory.executeHooks(calls, nonce, _smartWallet, signature);
         address proxyAddress = factory.proxyOf(_smartWallet);
+        signature = _signWithSmartWalletForProxy(calls, nonce, smartWalletAddr, proxyAddress);
+        factory.executeHooks(calls, nonce, _smartWallet, signature);
         assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
         assertAdminAndImpl(proxyAddress, _smartWallet, address(cowshedImpl));
     }
@@ -114,47 +117,47 @@ contract BaseTest is Test {
         assertEq(actualImpl, expectedImpl, "!impl");
     }
 
-    function _signForFactory(Call[] memory calls, bytes32 nonce, Vm.Wallet memory _wallet)
+    function _signForProxy(Call[] memory calls, bytes32 nonce, Vm.Wallet memory _wallet)
         internal
         view
         returns (bytes memory)
     {
-        bytes32 digest = cproxy.hashToSign(calls, nonce, factory.domainSeparator());
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, digest);
-        return abi.encodePacked(r, s, v);
-    }
-
-    function _signForProxy(address proxy, Call[] memory calls, bytes32 nonce, Vm.Wallet memory _wallet)
-        internal
-        view
-        returns (bytes memory)
-    {
-        bytes32 domainSeparator = COWShed(payable(proxy)).domainSeparator();
+        address proxy = factory.proxyOf(_wallet.addr);
+        bytes32 domainSeparator = _proxyDomainSeparator(proxy);
         bytes32 digest = cproxy.hashToSign(calls, nonce, domainSeparator);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, digest);
         return abi.encodePacked(r, s, v);
-    }
-
-    function _signWithSmartWalletForFactory(Call[] memory calls, bytes32 nonce, address _smartWallet)
-        internal
-        returns (bytes memory)
-    {
-        bytes32 digest = cproxy.hashToSign(calls, nonce, factory.domainSeparator());
-        vm.prank(SmartWallet(_smartWallet).owner());
-        bytes memory sig = abi.encode(digest);
-        SmartWallet(_smartWallet).sign(digest, sig);
-        return sig;
     }
 
     function _signWithSmartWalletForProxy(Call[] memory calls, bytes32 nonce, address _smartWallet, address proxy)
         internal
         returns (bytes memory)
     {
-        bytes32 domainSeparator = COWShed(payable(proxy)).domainSeparator();
+        bytes32 domainSeparator = _proxyDomainSeparator(proxy);
         bytes32 digest = cproxy.hashToSign(calls, nonce, domainSeparator);
         bytes memory sig = abi.encode(digest);
         vm.prank(SmartWallet(_smartWallet).owner());
         SmartWallet(_smartWallet).sign(digest, sig);
         return sig;
+    }
+
+    function _computeDomainSeparatorForProxy(address proxy) internal view returns (bytes32) {
+        bytes32 domainTypeHash =
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+        string memory name = "COWShed";
+        string memory version = "1.0.0";
+        uint256 chainId = block.chainid;
+        address verifyingContract = proxy;
+        return keccak256(
+            abi.encode(domainTypeHash, keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract)
+        );
+    }
+
+    function _proxyDomainSeparator(address proxy) internal view returns (bytes32 domainSeparator) {
+        if (proxy.code.length > 0) {
+            domainSeparator = COWShed(payable(proxy)).domainSeparator();
+        } else {
+            domainSeparator = _computeDomainSeparatorForProxy(proxy);
+        }
     }
 }

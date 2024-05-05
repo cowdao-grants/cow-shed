@@ -35,7 +35,7 @@ contract COWShedTest is BaseTest {
             Call({ target: address(stub), value: 0, allowFailure: true, callData: abi.encodeCall(stub.willRevert, ()) });
         bytes32 nonce = "1";
 
-        bytes memory signature = _signForFactory(calls, nonce, user);
+        bytes memory signature = _signForProxy(calls, nonce, user);
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
         factory.executeHooks(calls, nonce, user.addr, signature);
@@ -49,7 +49,7 @@ contract COWShedTest is BaseTest {
         // test that allowFailure works as expected
         calls[1].allowFailure = false;
         nonce = "2";
-        signature = _signForProxy(userProxyAddr, calls, nonce, user);
+        signature = _signForProxy(calls, nonce, user);
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
         vm.expectRevert(Stub.Revert.selector);
@@ -68,7 +68,7 @@ contract COWShedTest is BaseTest {
             value: 0
         });
         bytes32 nonce = "1";
-        bytes memory signature = _signForProxy(userProxyAddr, calls, nonce, user);
+        bytes memory signature = _signForProxy(calls, nonce, user);
         userProxy.executeHooks(calls, nonce, signature);
 
         vm.prank(addr);
@@ -90,7 +90,7 @@ contract COWShedTest is BaseTest {
             value: 0
         });
         bytes32 nonce = "1";
-        bytes memory signature = _signForProxy(userProxyAddr, calls, nonce, user);
+        bytes memory signature = _signForProxy(calls, nonce, user);
         userProxy.executeHooks(calls, nonce, signature);
 
         assertTrue(COWShed(payable(userProxy)).trustedExecutors(addr), "should be a trusted executor");

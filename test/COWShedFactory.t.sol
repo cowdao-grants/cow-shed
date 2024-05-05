@@ -15,16 +15,14 @@ contract COWShedFactoryTest is BaseTest {
 
         calls[1] = Call({ target: addr2, value: 0, callData: hex"11", allowFailure: false });
 
-        bytes32 nonce = "nonce";
-        bytes32 hash = cproxy.hashToSign(calls, nonce, factory.domainSeparator());
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(wallet, hash);
-
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
+        bytes32 nonce = "nonce";
+        bytes memory signature = _signForProxy(calls, nonce, wallet);
         vm.expectCall(addr1, calls[0].callData);
         vm.expectCall(addr2, calls[1].callData);
-        factory.executeHooks(calls, nonce, wallet.addr, abi.encodePacked(r, s, v));
+        factory.executeHooks(calls, nonce, wallet.addr, signature);
         assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
 
         assertEq(
@@ -34,7 +32,7 @@ contract COWShedFactoryTest is BaseTest {
         );
 
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
-        factory.executeHooks(calls, nonce, wallet.addr, abi.encodePacked(r, s, v));
+        factory.executeHooks(calls, nonce, wallet.addr, signature);
     }
 
     function testDomainSeparators() external {

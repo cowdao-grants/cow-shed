@@ -15,12 +15,12 @@ contract COWShedStorage {
         mapping(bytes32 => bool) nonces;
     }
 
-    /// @dev keccak256("COWShed.State")
-    bytes32 internal constant STATE_STORAGE_SLOT = 0x68df44b1011761f481358c0f49a711192727fb02c377d697bcb0ea8ff8393ac0;
+    bytes32 internal constant STATE_STORAGE_SLOT = keccak256("COWShed.State");
 
     function _state() internal pure returns (State storage state) {
+        bytes32 stateSlot = STATE_STORAGE_SLOT;
         assembly {
-            state.slot := STATE_STORAGE_SLOT
+            state.slot := stateSlot
         }
     }
 

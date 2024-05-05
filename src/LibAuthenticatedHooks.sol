@@ -8,12 +8,11 @@ interface IERC1271 {
 library LibAuthenticatedHooks {
     error InvalidSignature();
 
-    /// @dev keccak256("Call(address target,uint256 value,bytes callData,bool allowFailure)")
-    bytes32 internal constant CALL_TYPE_HASH = 0x7a0eb730f016d74a17b2e060afce75f3aabe83983b62d9c6cdcd090013b536cd;
-    /// @dev keccak256("ExecuteHooks(Call[] calls,bytes32 nonce)Call(address target,uint256 value,bytes callData,bool allowFailure)")
-    bytes32 internal constant EXECUTE_HOOKS_TYPE_HASH =
-        0xaf2bd84ba6040bf9f1016009cf132bc2c92f27c4bcaef806c80db6ba08408fd3;
-    /// @dev magic value to be returned for valid signatures
+    bytes32 internal constant CALL_TYPE_HASH =
+        keccak256("Call(address target,uint256 value,bytes callData,bool allowFailure)");
+    bytes32 internal constant EXECUTE_HOOKS_TYPE_HASH = keccak256(
+        "ExecuteHooks(Call[] calls,bytes32 nonce)Call(address target,uint256 value,bytes callData,bool allowFailure)"
+    );
     bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
 
     function authenticateHooks(
@@ -61,10 +60,11 @@ library LibAuthenticatedHooks {
 
     function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce) internal pure returns (bytes32 hash) {
         bytes32 callshash = callsHash(calls);
+        bytes32 executeHooksTypeHash = EXECUTE_HOOKS_TYPE_HASH;
 
         assembly ("memory-safe") {
             let before := mload(0x40)
-            mstore(0x00, EXECUTE_HOOKS_TYPE_HASH)
+            mstore(0x00, executeHooksTypeHash)
             mstore(0x20, callshash)
             mstore(0x40, nonce)
             hash := keccak256(0x00, 0x60)
@@ -92,12 +92,13 @@ library LibAuthenticatedHooks {
         uint256 value = cll.value;
         bytes32 callDataHash = keccak256(cll.callData);
         bool allowFailure = cll.allowFailure;
+        bytes32 callTypeHash = CALL_TYPE_HASH;
 
         assembly ("memory-safe") {
             let freeMemoryPointer := mload(0x40)
             let firstSlot := mload(0x80)
 
-            mstore(0x00, CALL_TYPE_HASH)
+            mstore(0x00, callTypeHash)
             mstore(0x20, target)
             mstore(0x40, value)
             mstore(0x60, callDataHash)
