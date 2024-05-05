@@ -23,6 +23,38 @@ contract LibAuthenticatedHooksCalldataProxy {
     function callHash(Call calldata cll) external pure returns (bytes32) {
         return LibAuthenticatedHooks.callHash(cll);
     }
+
+    function decodeEOASignature(bytes calldata signature) external pure returns (bytes32 r, bytes32 s, uint8 v) {
+        return LibAuthenticatedHooks.decodeEOASignature(signature);
+    }
+}
+
+contract SmartWallet {
+    error OnlyOwner();
+
+    address public immutable owner;
+    mapping(bytes32 => bytes) signatures;
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) {
+            revert OnlyOwner();
+        }
+        _;
+    }
+
+    constructor(address _owner) {
+        owner = _owner;
+    }
+
+    function sign(bytes32 hash, bytes calldata signature) external onlyOwner {
+        signatures[hash] = signature;
+    }
+
+    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4) {
+        return (keccak256(signature) == keccak256(signatures[hash]) && signatures[hash].length > 0)
+            ? LibAuthenticatedHooks.MAGIC_VALUE_1271
+            : bytes4(0);
+    }
 }
 
 contract BaseTest is Test {
@@ -33,23 +65,45 @@ contract BaseTest is Test {
     COWShedFactory factory = new COWShedFactory(address(cowshedImpl));
     LibAuthenticatedHooksCalldataProxy cproxy = new LibAuthenticatedHooksCalldataProxy();
 
-    function setUp() external {
+    address smartWalletAddr;
+    SmartWallet smartWallet;
+    address smartWalletProxyAddr;
+    COWShed smartWalletProxy;
+
+    function setUp() external virtual {
         user = vm.createWallet("user");
         userProxyAddr = factory.proxyOf(user.addr);
         userProxy = COWShed(payable(userProxyAddr));
         _initializeUserProxy(user);
+
+        smartWallet = new SmartWallet(user.addr);
+        smartWalletAddr = address(smartWallet);
+        smartWalletProxyAddr = factory.proxyOf(smartWalletAddr);
+        smartWalletProxy = COWShed(payable(smartWalletProxyAddr));
+        _initializeSmartWalletProxy(smartWalletAddr);
     }
 
-    function _initializeUserProxy(Vm.Wallet memory _wallet) internal returns (bytes32 r, bytes32 s, uint8 v) {
+    function _initializeUserProxy(Vm.Wallet memory _wallet) internal returns (bytes memory signature) {
         Call[] memory calls = new Call[](0);
         bytes32 nonce = "nonce1";
         bytes32 digest = cproxy.hashToSign(calls, nonce, factory.domainSeparator());
-        (v, r, s) = vm.sign(_wallet.privateKey, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, digest);
+        signature = abi.encodePacked(r, s, v);
 
-        factory.executeHooks(calls, nonce, r, s, v);
+        factory.executeHooks(calls, nonce, _wallet.addr, signature);
         address proxyAddress = factory.proxyOf(_wallet.addr);
         assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
         assertAdminAndImpl(proxyAddress, _wallet.addr, address(cowshedImpl));
+    }
+
+    function _initializeSmartWalletProxy(address _smartWallet) internal returns (bytes memory signature) {
+        Call[] memory calls = new Call[](0);
+        bytes32 nonce = "nonce1";
+        signature = _signWithSmartWalletForFactory(calls, nonce, smartWalletAddr);
+        factory.executeHooks(calls, nonce, _smartWallet, signature);
+        address proxyAddress = factory.proxyOf(_smartWallet);
+        assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
+        assertAdminAndImpl(proxyAddress, _smartWallet, address(cowshedImpl));
     }
 
     function assertAdminAndImpl(address proxy, address expectedAdmin, address expectedImpl) internal view {
@@ -63,19 +117,44 @@ contract BaseTest is Test {
     function _signForFactory(Call[] memory calls, bytes32 nonce, Vm.Wallet memory _wallet)
         internal
         view
-        returns (bytes32 r, bytes32 s, uint8 v)
+        returns (bytes memory)
     {
         bytes32 digest = cproxy.hashToSign(calls, nonce, factory.domainSeparator());
-        (v, r, s) = vm.sign(_wallet.privateKey, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, digest);
+        return abi.encodePacked(r, s, v);
     }
 
     function _signForProxy(address proxy, Call[] memory calls, bytes32 nonce, Vm.Wallet memory _wallet)
         internal
         view
-        returns (bytes32 r, bytes32 s, uint8 v)
+        returns (bytes memory)
     {
         bytes32 domainSeparator = COWShed(payable(proxy)).domainSeparator();
         bytes32 digest = cproxy.hashToSign(calls, nonce, domainSeparator);
-        (v, r, s) = vm.sign(_wallet.privateKey, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _signWithSmartWalletForFactory(Call[] memory calls, bytes32 nonce, address _smartWallet)
+        internal
+        returns (bytes memory)
+    {
+        bytes32 digest = cproxy.hashToSign(calls, nonce, factory.domainSeparator());
+        vm.prank(SmartWallet(_smartWallet).owner());
+        bytes memory sig = abi.encode(digest);
+        SmartWallet(_smartWallet).sign(digest, sig);
+        return sig;
+    }
+
+    function _signWithSmartWalletForProxy(Call[] memory calls, bytes32 nonce, address _smartWallet, address proxy)
+        internal
+        returns (bytes memory)
+    {
+        bytes32 domainSeparator = COWShed(payable(proxy)).domainSeparator();
+        bytes32 digest = cproxy.hashToSign(calls, nonce, domainSeparator);
+        bytes memory sig = abi.encode(digest);
+        vm.prank(SmartWallet(_smartWallet).owner());
+        SmartWallet(_smartWallet).sign(digest, sig);
+        return sig;
     }
 }

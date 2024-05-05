@@ -6,6 +6,8 @@ interface IERC1271 {
 }
 
 library LibAuthenticatedHooks {
+    error InvalidSignature();
+
     /// @dev keccak256("Call(address target,uint256 value,bytes callData,bool allowFailure)")
     bytes32 internal constant CALL_TYPE_HASH = 0x7a0eb730f016d74a17b2e060afce75f3aabe83983b62d9c6cdcd090013b536cd;
     /// @dev keccak256("ExecuteHooks(Call[] calls,bytes32 nonce)Call(address target,uint256 value,bytes callData,bool allowFailure)")
@@ -17,23 +19,22 @@ library LibAuthenticatedHooks {
     function authenticateHooks(
         Call[] calldata calls,
         bytes32 nonce,
-        bytes32 r,
-        bytes32 s,
-        uint8 v,
+        address user,
+        bytes calldata signature,
         bytes32 domainSeparator
-    ) internal view returns (bool, address) {
+    ) internal view returns (bool) {
         bytes32 toSign = hashToSign(calls, nonce, domainSeparator);
 
         // smart contract signer
-        if (v == 0) {
-            address account = address(uint160(uint256(r)));
-            bool isAuthorized = IERC1271(account).isValidSignature(toSign, abi.encode(s)) == MAGIC_VALUE_1271;
-            return (isAuthorized, account);
+        if (user.code.length > 0) {
+            bool isAuthorized = IERC1271(user).isValidSignature(toSign, signature) == MAGIC_VALUE_1271;
+            return (isAuthorized);
         }
         // eoa signer
         else {
+            (bytes32 r, bytes32 s, uint8 v) = decodeEOASignature(signature);
             address recovered = ECDSA.recover(toSign, v, r, s);
-            return (true, recovered);
+            return user == recovered;
         }
     }
 
@@ -126,6 +127,18 @@ library LibAuthenticatedHooks {
             unchecked {
                 ++i;
             }
+        }
+    }
+
+    function decodeEOASignature(bytes calldata signature) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+        if (signature.length != 65) {
+            revert InvalidSignature();
+        }
+        uint256 mask = 0xff;
+        assembly {
+            r := calldataload(signature.offset)
+            s := calldataload(add(signature.offset, 0x20))
+            v := and(calldataload(add(signature.offset, 0x21)), mask)
         }
     }
 }

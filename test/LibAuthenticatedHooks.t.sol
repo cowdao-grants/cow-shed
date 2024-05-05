@@ -3,6 +3,8 @@ import { Test } from "forge-std/Test.sol";
 import { BaseTest } from "./BaseTest.sol";
 
 contract LibAuthenticatedHooksTest is BaseTest {
+    function setUp() external override { }
+
     function testExecuteHooksHash() external view {
         Call[] memory calls = new Call[](2);
         calls[0] = Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false });
@@ -41,5 +43,12 @@ contract LibAuthenticatedHooksTest is BaseTest {
         assertEq(
             cproxy.callsHash(calls), 0xe6b3545d63155e33472ceaaf3bb7536ebe748edf721e23e430c9eb16c2893924, "!callsHash"
         );
+    }
+
+    function testDecodeEOASignature(bytes32 r, bytes32 s, uint8 v) external view {
+        (bytes32 ar, bytes32 as_, uint8 av) = cproxy.decodeEOASignature(abi.encodePacked(r, s, v));
+        assertEq(ar, r, "!r");
+        assertEq(as_, s, "!s");
+        assertEq(av, v, "!v");
     }
 }

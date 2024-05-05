@@ -24,7 +24,7 @@ contract COWShedFactoryTest is BaseTest {
 
         vm.expectCall(addr1, calls[0].callData);
         vm.expectCall(addr2, calls[1].callData);
-        factory.executeHooks(calls, nonce, r, s, v);
+        factory.executeHooks(calls, nonce, wallet.addr, abi.encodePacked(r, s, v));
         assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
 
         assertEq(
@@ -34,7 +34,7 @@ contract COWShedFactoryTest is BaseTest {
         );
 
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
-        factory.executeHooks(calls, nonce, r, s, v);
+        factory.executeHooks(calls, nonce, wallet.addr, abi.encodePacked(r, s, v));
     }
 
     function testDomainSeparators() external {
@@ -50,13 +50,9 @@ contract COWShedFactoryTest is BaseTest {
         vm.label(address(proxy1), "proxy1");
         vm.label(address(proxy2), "proxy2");
 
-        bytes32 domainSeparator1 = proxy1.domainSeparator();
-        // emit log_uint(address(proxy2).code.length);
-        // bytes32 domainSeparator2 = proxy2.domainSeparator();
-
-        // assertTrue(
-        //     proxy1.domainSeparator() != proxy2.domainSeparator(),
-        //     "different proxies should have different domain separators"
-        // );
+        assertTrue(
+            proxy1.domainSeparator() != proxy2.domainSeparator(),
+            "different proxies should have different domain separators"
+        );
     }
 }

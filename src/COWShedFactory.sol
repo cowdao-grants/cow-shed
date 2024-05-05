@@ -18,22 +18,21 @@ contract COWShedFactory is EIP712 {
         implementation = impl;
     }
 
-    function executeHooks(Call[] calldata calls, bytes32 nonce, bytes32 r, bytes32 s, uint8 v) external {
-        (bool authorized, address recovered) =
-            LibAuthenticatedHooks.authenticateHooks(calls, nonce, r, s, v, _domainSeparator());
+    function executeHooks(Call[] calldata calls, bytes32 nonce, address user, bytes calldata signature) external {
+        bool authorized = LibAuthenticatedHooks.authenticateHooks(calls, nonce, user, signature, _domainSeparator());
         if (!authorized) {
             revert InvalidSignature();
         }
 
-        if (nonces[recovered][nonce]) {
+        if (nonces[user][nonce]) {
             revert NonceAlreadyUsed();
         }
-        nonces[recovered][nonce] = true;
+        nonces[user][nonce] = true;
 
-        address proxy = proxyOf(recovered);
+        address proxy = proxyOf(user);
         if (proxy.code.length == 0) {
-            COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(recovered))) }();
-            COWShed(payable(address(newProxy))).initialize(implementation, recovered, address(this), calls);
+            COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }();
+            COWShed(payable(address(newProxy))).initialize(implementation, user, address(this), calls);
         } else {
             COWShed(payable(proxy)).trustedExecuteHooks(calls);
         }

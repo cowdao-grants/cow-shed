@@ -35,25 +35,25 @@ contract COWShedTest is BaseTest {
             Call({ target: address(stub), value: 0, allowFailure: true, callData: abi.encodeCall(stub.willRevert, ()) });
         bytes32 nonce = "1";
 
-        (bytes32 r, bytes32 s, uint8 v) = _signForFactory(calls, nonce, user);
+        bytes memory signature = _signForFactory(calls, nonce, user);
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
-        factory.executeHooks(calls, nonce, r, s, v);
+        factory.executeHooks(calls, nonce, user.addr, signature);
 
         // same sig shouldnt work more than once
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
-        factory.executeHooks(calls, nonce, r, s, v);
+        factory.executeHooks(calls, nonce, user.addr, signature);
 
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
 
         // test that allowFailure works as expected
         calls[1].allowFailure = false;
         nonce = "2";
-        (r, s, v) = _signForProxy(userProxyAddr, calls, nonce, user);
+        signature = _signForProxy(userProxyAddr, calls, nonce, user);
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
         vm.expectRevert(Stub.Revert.selector);
-        userProxy.executeHooks(calls, nonce, r, s, v);
+        userProxy.executeHooks(calls, nonce, signature);
     }
 
     function testTrustedExecuteHooks() external {
@@ -68,8 +68,8 @@ contract COWShedTest is BaseTest {
             value: 0
         });
         bytes32 nonce = "1";
-        (bytes32 r, bytes32 s, uint8 v) = _signForProxy(userProxyAddr, calls, nonce, user);
-        userProxy.executeHooks(calls, nonce, r, s, v);
+        bytes memory signature = _signForProxy(userProxyAddr, calls, nonce, user);
+        userProxy.executeHooks(calls, nonce, signature);
 
         vm.prank(addr);
         vm.expectCall(address(0), hex"1234");
@@ -90,8 +90,8 @@ contract COWShedTest is BaseTest {
             value: 0
         });
         bytes32 nonce = "1";
-        (bytes32 r, bytes32 s, uint8 v) = _signForProxy(userProxyAddr, calls, nonce, user);
-        userProxy.executeHooks(calls, nonce, r, s, v);
+        bytes memory signature = _signForProxy(userProxyAddr, calls, nonce, user);
+        userProxy.executeHooks(calls, nonce, signature);
 
         assertTrue(COWShed(payable(userProxy)).trustedExecutors(addr), "should be a trusted executor");
     }
@@ -103,9 +103,29 @@ contract COWShedTest is BaseTest {
         assertEq(Stub(userProxyAddr).returnUint(), 420, "didnt update as expected");
     }
 
-    function _sign(Call[] memory calls, bytes32 nonce, Vm.Wallet memory user)
-        internal
-        view
-        returns (bytes32 r, bytes32 s, uint8 v)
-    { }
+    function testExecuteHooksForSmartAccount() external {
+        // fund the proxy
+        smartWalletProxyAddr.call{ value: 1 ether }("");
+
+        Call[] memory calls = new Call[](2);
+        calls[0] = Call({
+            target: address(stub),
+            value: 0.05 ether,
+            allowFailure: false,
+            callData: abi.encodeCall(stub.callWithValue, ())
+        });
+        calls[1] =
+            Call({ target: address(stub), value: 0, allowFailure: true, callData: abi.encodeCall(stub.willRevert, ()) });
+        bytes32 nonce = "1";
+        bytes memory sig = _signWithSmartWalletForProxy(calls, nonce, smartWalletAddr, smartWalletProxyAddr);
+        vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
+        vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
+        smartWalletProxy.executeHooks(calls, nonce, sig);
+
+        // same sig shouldnt work more than once
+        vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
+        smartWalletProxy.executeHooks(calls, nonce, sig);
+
+        assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
+    }
 }
