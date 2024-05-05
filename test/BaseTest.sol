@@ -88,7 +88,7 @@ contract BaseTest is Test {
         bytes32 nonce = "nonce1";
 
         address proxyAddress = factory.proxyOf(_wallet.addr);
-        bytes memory signature = _signForProxy(calls, nonce, _wallet);
+        signature = _signForProxy(calls, nonce, _wallet);
         factory.executeHooks(calls, nonce, _wallet.addr, signature);
         assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
         assertAdminAndImpl(proxyAddress, _wallet.addr, address(cowshedImpl));
