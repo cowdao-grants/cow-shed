@@ -1,6 +1,6 @@
 import { ICOWAuthHook, Call } from "./ICOWAuthHook.sol";
 import { LibAuthenticatedHooks } from "./LibAuthenticatedHooks.sol";
-import { COWShedStorage, ADMIN_STORAGE_SLOT, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
+import { COWShedStorage, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
@@ -17,8 +17,6 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     bytes32 internal constant domainTypeHash =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
-    address immutable SELF;
-
     modifier onlyTrustedExecutor() {
         if (msg.sender != _state().trustedExecutor) {
             revert OnlyTrustedExecutor();
@@ -33,24 +31,11 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _;
     }
 
-    constructor() {
-        SELF = address(this);
-    }
-
-    function initialize(address admin, address factory) external {
+    function initialize(address factory) external {
         if (_state().initialized) {
             revert AlreadyInitialized();
         }
         _state().initialized = true;
-
-        address self = SELF;
-        assembly {
-            sstore(ADMIN_STORAGE_SLOT, admin)
-            sstore(IMPLEMENTATION_STORAGE_SLOT, self)
-        }
-        emit AdminChanged(address(0), admin);
-        emit Upgraded(self);
-
         _state().trustedExecutor = factory;
         emit TrustedExecutorChanged(address(0), factory);
     }

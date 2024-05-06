@@ -2,7 +2,7 @@ import { Test, Vm } from "forge-std/Test.sol";
 import { COWShed, Call } from "src/COWShed.sol";
 import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 import { COWShedFactory } from "src/COWShedFactory.sol";
-import { ADMIN_STORAGE_SLOT, IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
+import { IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
 
 contract LibAuthenticatedHooksCalldataProxy {
     function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
@@ -95,7 +95,7 @@ contract BaseTest is Test {
         signature = _signForProxy(calls, nonce, _deadline(), _wallet);
         factory.executeHooks(calls, nonce, _deadline(), _wallet.addr, signature);
         assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
-        assertAdminAndImpl(proxyAddress, _wallet.addr, address(cowshedImpl));
+        assertImpl(proxyAddress, address(cowshedImpl));
         assertEq(
             COWShed(payable(proxyAddress)).domainSeparator(),
             _computeDomainSeparatorForProxy(proxyAddress),
@@ -110,14 +110,11 @@ contract BaseTest is Test {
         signature = _signWithSmartWalletForProxy(calls, nonce, _deadline(), smartWalletAddr, proxyAddress);
         factory.executeHooks(calls, nonce, _deadline(), _smartWallet, signature);
         assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
-        assertAdminAndImpl(proxyAddress, _smartWallet, address(cowshedImpl));
+        assertImpl(proxyAddress, address(cowshedImpl));
     }
 
-    function assertAdminAndImpl(address proxy, address expectedAdmin, address expectedImpl) internal view {
-        address actualAdmin = address(uint160(uint256(vm.load(proxy, ADMIN_STORAGE_SLOT))));
+    function assertImpl(address proxy, address expectedImpl) internal view {
         address actualImpl = address(uint160(uint256(vm.load(proxy, IMPLEMENTATION_STORAGE_SLOT))));
-
-        assertEq(actualAdmin, expectedAdmin, "!admin");
         assertEq(actualImpl, expectedImpl, "!impl");
     }
 

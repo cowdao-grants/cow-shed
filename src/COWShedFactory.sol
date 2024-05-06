@@ -24,7 +24,7 @@ contract COWShedFactory {
         address proxy = proxyOf(user);
         if (proxy.code.length == 0) {
             COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }(implementation, user);
-            COWShed(payable(proxy)).initialize(user, address(this));
+            COWShed(payable(proxy)).initialize(address(this));
             emit COWShedBuilt(user, address(newProxy));
         }
         COWShed(payable(proxy)).executeHooks(calls, nonce, deadline, signature);

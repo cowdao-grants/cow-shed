@@ -166,7 +166,7 @@ contract COWShedTest is BaseTest {
     function testUpdateImplementation() external {
         vm.prank(user.addr);
         userProxy.updateImplementation(address(stub));
-        assertAdminAndImpl(userProxyAddr, user.addr, address(stub));
+        assertImpl(userProxyAddr, address(stub));
         assertEq(Stub(userProxyAddr).returnUint(), 420, "didnt update as expected");
     }
 

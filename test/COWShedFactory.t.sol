@@ -3,7 +3,6 @@ import { Vm, Test } from "forge-std/Test.sol";
 import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
 import { COWShed } from "src/COWShed.sol";
 import { BaseTest } from "./BaseTest.sol";
-import { ADMIN_STORAGE_SLOT } from "src/COWShedStorage.sol";
 
 contract COWShedFactoryTest is BaseTest {
     function testExecuteHooks() external {
@@ -26,12 +25,6 @@ contract COWShedFactoryTest is BaseTest {
         vm.expectCall(addr2, calls[1].callData);
         factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
         assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
-
-        assertEq(
-            address(uint160(uint256(vm.load(expectedProxyAddress, ADMIN_STORAGE_SLOT)))),
-            wallet.addr,
-            "proxy admin not as expected"
-        );
 
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
         factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);

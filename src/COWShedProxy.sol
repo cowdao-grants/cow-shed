@@ -9,8 +9,8 @@ contract COWShedProxy is COWShedStorage, Proxy {
 
     address internal immutable ADMIN;
 
-    constructor(address implementation, address admin) {
-        admin = ADMIN;
+    constructor(address implementation, address admin_) {
+        ADMIN = admin_;
         assembly {
             sstore(IMPLEMENTATION_STORAGE_SLOT, implementation)
         }
@@ -24,6 +24,18 @@ contract COWShedProxy is COWShedStorage, Proxy {
             emit Upgraded(newImplementation);
         }
         // transparent proxy for everyone other than admin
+        else {
+            _fallback();
+        }
+    }
+
+    function admin() external returns (address) {
+        if (msg.sender == address(this)) {
+            return ADMIN;
+        }
+        // transparently proxy for everyone other than self. this will allow the implementation
+        // to get the admin of the proxy without using the storage, and it costs the same
+        // if not less than using admin storage variable
         else {
             _fallback();
         }
