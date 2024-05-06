@@ -56,6 +56,21 @@ contract COWShedTest is BaseTest {
         userProxy.executeHooks(calls, nonce, signature);
     }
 
+    function testRevokeNonce() external {
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({ target: address(0), callData: hex"0011", value: 0, allowFailure: false });
+        bytes32 nonce = "nonce-to-revoke";
+        bytes memory signature = _signForProxy(calls, nonce, user);
+        assertFalse(userProxy.nonces(nonce), "nonce is already used");
+
+        vm.prank(user.addr);
+        userProxy.revokeNonce(nonce);
+        assertTrue(userProxy.nonces(nonce), "nonce is not used yet");
+
+        vm.expectRevert(COWShed.NonceAlreadyUsed.selector);
+        userProxy.executeHooks(calls, nonce, signature);
+    }
+
     function testTrustedExecuteHooks() external {
         address addr = makeAddr("addr");
         assertFalse(COWShed(payable(userProxy)).trustedExecutor() == addr, "should not be a trusted executor");

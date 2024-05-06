@@ -55,6 +55,13 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _;
     }
 
+    modifier onlyAdmin() {
+        if (msg.sender != _admin()) {
+            revert OnlyAdmin();
+        }
+        _;
+    }
+
     function initialize(address implementation, address admin, address factory, Call[] calldata calls) external {
         if (_state().initialized) {
             revert AlreadyInitialized();
@@ -95,14 +102,16 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         emit TrustedExecutorChanged(prev, who);
     }
 
-    function updateImplementation(address newImplementation) external {
-        if (msg.sender != _admin()) {
-            revert OnlyAdmin();
-        }
+    function updateImplementation(address newImplementation) external onlyAdmin {
         assembly {
             sstore(IMPLEMENTATION_STORAGE_SLOT, newImplementation)
         }
         emit Upgraded(newImplementation);
+    }
+
+    /// @notice Revoke a given nonce. Only the proxy owner/admin can do this.
+    function revokeNonce(bytes32 nonce) external onlyAdmin {
+        _state().nonces[nonce] = true;
     }
 
     receive() external payable { }
