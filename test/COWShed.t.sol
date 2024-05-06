@@ -2,6 +2,7 @@ import { COWShed, COWShedProxy, Call } from "src/COWShed.sol";
 import { Test, Vm } from "forge-std/Test.sol";
 import { COWShedFactory } from "src/COWShedFactory.sol";
 import { BaseTest } from "./BaseTest.sol";
+import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 
 contract Stub {
     error Revert();
@@ -35,32 +36,42 @@ contract COWShedTest is BaseTest {
             Call({ target: address(stub), value: 0, allowFailure: true, callData: abi.encodeCall(stub.willRevert, ()) });
         bytes32 nonce = "1";
 
-        bytes memory signature = _signForProxy(calls, nonce, user);
+        bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
-        factory.executeHooks(calls, nonce, user.addr, signature);
+        factory.executeHooks(calls, nonce, _deadline(), user.addr, signature);
 
         // same sig shouldnt work more than once
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
-        factory.executeHooks(calls, nonce, user.addr, signature);
+        factory.executeHooks(calls, nonce, _deadline(), user.addr, signature);
 
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
 
         // test that allowFailure works as expected
         calls[1].allowFailure = false;
         nonce = "2";
-        signature = _signForProxy(calls, nonce, user);
+        signature = _signForProxy(calls, nonce, _deadline(), user);
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
         vm.expectRevert(Stub.Revert.selector);
-        userProxy.executeHooks(calls, nonce, signature);
+        userProxy.executeHooks(calls, nonce, _deadline(), signature);
+    }
+
+    function testExecuteHooksDeadline() external {
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({ target: address(0), value: 0, allowFailure: false, callData: hex"0011" });
+        bytes32 nonce = "deadline-nonce";
+        uint256 deadline = block.timestamp - 1;
+        bytes memory signature = _signForProxy(calls, nonce, deadline, user);
+        vm.expectRevert(LibAuthenticatedHooks.DeadlineElapsed.selector);
+        userProxy.executeHooks(calls, nonce, deadline, signature);
     }
 
     function testRevokeNonce() external {
         Call[] memory calls = new Call[](1);
         calls[0] = Call({ target: address(0), callData: hex"0011", value: 0, allowFailure: false });
         bytes32 nonce = "nonce-to-revoke";
-        bytes memory signature = _signForProxy(calls, nonce, user);
+        bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
         assertFalse(userProxy.nonces(nonce), "nonce is already used");
 
         vm.prank(user.addr);
@@ -68,7 +79,7 @@ contract COWShedTest is BaseTest {
         assertTrue(userProxy.nonces(nonce), "nonce is not used yet");
 
         vm.expectRevert(COWShed.NonceAlreadyUsed.selector);
-        userProxy.executeHooks(calls, nonce, signature);
+        userProxy.executeHooks(calls, nonce, _deadline(), signature);
     }
 
     function testTrustedExecuteHooks() external {
@@ -83,8 +94,8 @@ contract COWShedTest is BaseTest {
             value: 0
         });
         bytes32 nonce = "1";
-        bytes memory signature = _signForProxy(calls, nonce, user);
-        userProxy.executeHooks(calls, nonce, signature);
+        bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
+        userProxy.executeHooks(calls, nonce, _deadline(), signature);
 
         vm.prank(addr);
         vm.expectCall(address(0), hex"1234");
@@ -105,8 +116,8 @@ contract COWShedTest is BaseTest {
             value: 0
         });
         bytes32 nonce = "1";
-        bytes memory signature = _signForProxy(calls, nonce, user);
-        userProxy.executeHooks(calls, nonce, signature);
+        bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
+        userProxy.executeHooks(calls, nonce, _deadline(), signature);
 
         assertTrue(COWShed(payable(userProxy)).trustedExecutor() == addr, "should be a trusted executor");
     }
@@ -132,14 +143,15 @@ contract COWShedTest is BaseTest {
         calls[1] =
             Call({ target: address(stub), value: 0, allowFailure: true, callData: abi.encodeCall(stub.willRevert, ()) });
         bytes32 nonce = "1";
-        bytes memory sig = _signWithSmartWalletForProxy(calls, nonce, smartWalletAddr, smartWalletProxyAddr);
+        bytes memory sig =
+            _signWithSmartWalletForProxy(calls, nonce, _deadline(), smartWalletAddr, smartWalletProxyAddr);
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
-        smartWalletProxy.executeHooks(calls, nonce, sig);
+        smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
 
         // same sig shouldnt work more than once
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
-        smartWalletProxy.executeHooks(calls, nonce, sig);
+        smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
 
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
     }

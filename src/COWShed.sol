@@ -79,9 +79,10 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         this.updateTrustedExecutor(factory);
     }
 
-    function executeHooks(Call[] calldata calls, bytes32 nonce, bytes calldata signature) external {
+    function executeHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes calldata signature) external {
         address admin = _admin();
-        (bool authorized) = LibAuthenticatedHooks.authenticateHooks(calls, nonce, admin, signature, domainSeparator());
+        (bool authorized) =
+            LibAuthenticatedHooks.authenticateHooks(calls, nonce, deadline, admin, signature, domainSeparator());
         if (!authorized) {
             revert InvalidSignature();
         }

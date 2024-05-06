@@ -13,13 +13,19 @@ contract COWShedFactory {
         implementation = impl;
     }
 
-    function executeHooks(Call[] calldata calls, bytes32 nonce, address user, bytes calldata signature) external {
+    function executeHooks(
+        Call[] calldata calls,
+        bytes32 nonce,
+        uint256 deadline,
+        address user,
+        bytes calldata signature
+    ) external {
         address proxy = proxyOf(user);
         if (proxy.code.length == 0) {
             COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }();
             COWShed(payable(address(newProxy))).initialize(implementation, user, address(this), calls);
         }
-        COWShed(payable(proxy)).executeHooks(calls, nonce, signature);
+        COWShed(payable(proxy)).executeHooks(calls, nonce, deadline, signature);
     }
 
     function proxyOf(address who) public view returns (address) {

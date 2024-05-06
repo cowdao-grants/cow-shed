@@ -7,22 +7,27 @@ interface IERC1271 {
 
 library LibAuthenticatedHooks {
     error InvalidSignature();
+    error DeadlineElapsed();
 
     bytes32 internal constant CALL_TYPE_HASH =
         keccak256("Call(address target,uint256 value,bytes callData,bool allowFailure)");
     bytes32 internal constant EXECUTE_HOOKS_TYPE_HASH = keccak256(
-        "ExecuteHooks(Call[] calls,bytes32 nonce)Call(address target,uint256 value,bytes callData,bool allowFailure)"
+        "ExecuteHooks(Call[] calls,bytes32 nonce,uint256 deadline)Call(address target,uint256 value,bytes callData,bool allowFailure)"
     );
     bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
 
     function authenticateHooks(
         Call[] calldata calls,
         bytes32 nonce,
+        uint256 deadline,
         address user,
         bytes calldata signature,
         bytes32 domainSeparator
     ) internal view returns (bool) {
-        bytes32 toSign = hashToSign(calls, nonce, domainSeparator);
+        if (block.timestamp > deadline) {
+            revert DeadlineElapsed();
+        }
+        bytes32 toSign = hashToSign(calls, nonce, deadline, domainSeparator);
 
         // smart contract signer
         if (user.code.length > 0) {
@@ -37,12 +42,12 @@ library LibAuthenticatedHooks {
         }
     }
 
-    function hashToSign(Call[] calldata calls, bytes32 nonce, bytes32 domainSeparator)
+    function hashToSign(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes32 domainSeparator)
         internal
         pure
         returns (bytes32 _toSign)
     {
-        bytes32 messageHash = executeHooksMessageHash(calls, nonce);
+        bytes32 messageHash = executeHooksMessageHash(calls, nonce, deadline);
 
         assembly ("memory-safe") {
             let freeMemoryPointer := mload(0x40)
@@ -58,7 +63,11 @@ library LibAuthenticatedHooks {
         }
     }
 
-    function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce) internal pure returns (bytes32 hash) {
+    function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
+        internal
+        pure
+        returns (bytes32 hash)
+    {
         bytes32 callshash = callsHash(calls);
         bytes32 executeHooksTypeHash = EXECUTE_HOOKS_TYPE_HASH;
 
@@ -67,10 +76,13 @@ library LibAuthenticatedHooks {
             mstore(0x00, executeHooksTypeHash)
             mstore(0x20, callshash)
             mstore(0x40, nonce)
-            hash := keccak256(0x00, 0x60)
+            mstore(0x60, deadline)
+            hash := keccak256(0x00, 0x80)
 
             // restore free memory pointer
             mstore(0x40, before)
+            // restore the zero slot
+            mstore(0x60, 0)
         }
     }
 

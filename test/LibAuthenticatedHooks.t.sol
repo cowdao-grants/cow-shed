@@ -11,12 +11,13 @@ contract LibAuthenticatedHooksTest is BaseTest {
         calls[1] = Call({ target: address(0), callData: hex"00112233", value: 200000000, allowFailure: false });
 
         bytes32 nonce = bytes32(uint256(1));
-        bytes32 messageHash = cproxy.executeHooksMessageHash(calls, nonce);
+        uint256 deadline = 1714971380;
+        bytes32 messageHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
         bytes32 domainSeparator = 0xee788037c7d4fa9c073bf2b8e7afce63bf881a78fcf90302e3f8cad15ca4af07;
-        bytes32 hashToSign = cproxy.hashToSign(calls, nonce, domainSeparator);
+        bytes32 hashToSign = cproxy.hashToSign(calls, nonce, deadline, domainSeparator);
 
-        assertEq(messageHash, 0x0a78eaec6ae080d4d88364ab85a2b538fa9d13de20978359e50648eb35a936f0, "!messageHash");
-        assertEq(hashToSign, 0xf5c0edcb586b37c8dfdbdf32b25ce7b151e5ba4ae2c67d42d15247b83352edb5, "!hashToSign");
+        assertEq(messageHash, 0xdf2a2245607caac188878c5177f384415d6bbbdd7687d86979b89fc96c15fa2a, "!messageHash");
+        assertEq(hashToSign, 0x6eaf52b8339dba7c32dd6f6e699c25188dbbd12f525121ef6477e96c1f072e1c, "!hashToSign");
     }
 
     function testCallHash() external view {

@@ -4,16 +4,20 @@ import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 import { COWShedFactory } from "src/COWShedFactory.sol";
 
 contract LibAuthenticatedHooksCalldataProxy {
-    function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce) external pure returns (bytes32) {
-        return LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce);
-    }
-
-    function hashToSign(Call[] calldata calls, bytes32 nonce, bytes32 domainSeparator)
+    function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
         external
         pure
         returns (bytes32)
     {
-        return LibAuthenticatedHooks.hashToSign(calls, nonce, domainSeparator);
+        return LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
+    }
+
+    function hashToSign(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes32 domainSeparator)
+        external
+        pure
+        returns (bytes32)
+    {
+        return LibAuthenticatedHooks.hashToSign(calls, nonce, deadline, domainSeparator);
     }
 
     function callsHash(Call[] calldata calls) external pure returns (bytes32) {
@@ -86,10 +90,9 @@ contract BaseTest is Test {
     function _initializeUserProxy(Vm.Wallet memory _wallet) internal returns (bytes memory signature) {
         Call[] memory calls = new Call[](0);
         bytes32 nonce = "nonce1";
-
         address proxyAddress = factory.proxyOf(_wallet.addr);
-        signature = _signForProxy(calls, nonce, _wallet);
-        factory.executeHooks(calls, nonce, _wallet.addr, signature);
+        signature = _signForProxy(calls, nonce, _deadline(), _wallet);
+        factory.executeHooks(calls, nonce, _deadline(), _wallet.addr, signature);
         assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
         assertAdminAndImpl(proxyAddress, _wallet.addr, address(cowshedImpl));
         assertEq(
@@ -103,8 +106,8 @@ contract BaseTest is Test {
         Call[] memory calls = new Call[](0);
         bytes32 nonce = "nonce1";
         address proxyAddress = factory.proxyOf(_smartWallet);
-        signature = _signWithSmartWalletForProxy(calls, nonce, smartWalletAddr, proxyAddress);
-        factory.executeHooks(calls, nonce, _smartWallet, signature);
+        signature = _signWithSmartWalletForProxy(calls, nonce, _deadline(), smartWalletAddr, proxyAddress);
+        factory.executeHooks(calls, nonce, _deadline(), _smartWallet, signature);
         assertGt(proxyAddress.code.length, 0, "user proxy didnt initialize as expected");
         assertAdminAndImpl(proxyAddress, _smartWallet, address(cowshedImpl));
     }
@@ -117,24 +120,27 @@ contract BaseTest is Test {
         assertEq(actualImpl, expectedImpl, "!impl");
     }
 
-    function _signForProxy(Call[] memory calls, bytes32 nonce, Vm.Wallet memory _wallet)
+    function _signForProxy(Call[] memory calls, bytes32 nonce, uint256 deadline, Vm.Wallet memory _wallet)
         internal
         view
         returns (bytes memory)
     {
         address proxy = factory.proxyOf(_wallet.addr);
         bytes32 domainSeparator = _proxyDomainSeparator(proxy);
-        bytes32 digest = cproxy.hashToSign(calls, nonce, domainSeparator);
+        bytes32 digest = cproxy.hashToSign(calls, nonce, deadline, domainSeparator);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, digest);
         return abi.encodePacked(r, s, v);
     }
 
-    function _signWithSmartWalletForProxy(Call[] memory calls, bytes32 nonce, address _smartWallet, address proxy)
-        internal
-        returns (bytes memory)
-    {
+    function _signWithSmartWalletForProxy(
+        Call[] memory calls,
+        bytes32 nonce,
+        uint256 deadline,
+        address _smartWallet,
+        address proxy
+    ) internal returns (bytes memory) {
         bytes32 domainSeparator = _proxyDomainSeparator(proxy);
-        bytes32 digest = cproxy.hashToSign(calls, nonce, domainSeparator);
+        bytes32 digest = cproxy.hashToSign(calls, nonce, deadline, domainSeparator);
         bytes memory sig = abi.encode(digest);
         vm.prank(SmartWallet(_smartWallet).owner());
         SmartWallet(_smartWallet).sign(digest, sig);
@@ -159,5 +165,9 @@ contract BaseTest is Test {
         } else {
             domainSeparator = _computeDomainSeparatorForProxy(proxy);
         }
+    }
+
+    function _deadline() internal view returns (uint256) {
+        return block.timestamp + 1 hours;
     }
 }

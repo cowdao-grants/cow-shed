@@ -19,10 +19,10 @@ contract COWShedFactoryTest is BaseTest {
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
         bytes32 nonce = "nonce";
-        bytes memory signature = _signForProxy(calls, nonce, wallet);
+        bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
         vm.expectCall(addr1, calls[0].callData);
         vm.expectCall(addr2, calls[1].callData);
-        factory.executeHooks(calls, nonce, wallet.addr, signature);
+        factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
         assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
 
         assertEq(
@@ -32,7 +32,7 @@ contract COWShedFactoryTest is BaseTest {
         );
 
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
-        factory.executeHooks(calls, nonce, wallet.addr, signature);
+        factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
     }
 
     function testDomainSeparators() external {
