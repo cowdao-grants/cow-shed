@@ -10,9 +10,9 @@ library LibAuthenticatedHooks {
     error DeadlineElapsed();
 
     bytes32 internal constant CALL_TYPE_HASH =
-        keccak256("Call(address target,uint256 value,bytes callData,bool allowFailure)");
+        keccak256("Call(address target,uint256 value,bytes callData,bool allowFailure,bool isDelegateCall)");
     bytes32 internal constant EXECUTE_HOOKS_TYPE_HASH = keccak256(
-        "ExecuteHooks(Call[] calls,bytes32 nonce,uint256 deadline)Call(address target,uint256 value,bytes callData,bool allowFailure)"
+        "ExecuteHooks(Call[] calls,bytes32 nonce,uint256 deadline)Call(address target,uint256 value,bytes callData,bool allowFailure,bool isDelegateCall)"
     );
     bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
 
@@ -104,18 +104,21 @@ library LibAuthenticatedHooks {
         uint256 value = cll.value;
         bytes32 callDataHash = keccak256(cll.callData);
         bool allowFailure = cll.allowFailure;
+        bool isDelegateCall = cll.isDelegateCall;
         bytes32 callTypeHash = CALL_TYPE_HASH;
 
         assembly ("memory-safe") {
             let freeMemoryPointer := mload(0x40)
             let firstSlot := mload(0x80)
+            let secondSlot := mload(0xa0)
 
             mstore(0x00, callTypeHash)
             mstore(0x20, target)
             mstore(0x40, value)
             mstore(0x60, callDataHash)
             mstore(0x80, allowFailure)
-            _callHash := keccak256(0x00, 160)
+            mstore(0xa0, isDelegateCall)
+            _callHash := keccak256(0x00, 0xc0)
 
             // restore free memory pointer
             mstore(0x40, freeMemoryPointer)
@@ -123,13 +126,21 @@ library LibAuthenticatedHooks {
             mstore(0x60, 0x00)
             // restore first slot
             mstore(0x80, firstSlot)
+            // restore second slot
+            mstore(0xa0, secondSlot)
         }
     }
 
     function executeCalls(Call[] calldata calls) internal {
         for (uint256 i = 0; i < calls.length;) {
             Call memory call = calls[i];
-            (bool success, bytes memory ret) = call.target.call{ value: call.value }(call.callData);
+            bool success;
+            bytes memory ret;
+            if (call.isDelegateCall) {
+                (success, ret) = call.target.delegatecall(call.callData);
+            } else {
+                (success, ret) = call.target.call{ value: call.value }(call.callData);
+            }
             if (!success && !call.allowFailure) {
                 // bubble up the revert message
                 assembly {

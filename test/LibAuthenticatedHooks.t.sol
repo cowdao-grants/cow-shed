@@ -2,13 +2,23 @@ import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
 import { Test } from "forge-std/Test.sol";
 import { BaseTest } from "./BaseTest.sol";
 
+// mostly testing the eip712 encoding, hashing, etc.
+// it is differentially tested against the output of ethers' code for
+// doing the same. See [./ts/testUtil.ts]
 contract LibAuthenticatedHooksTest is BaseTest {
     function setUp() external override { }
 
     function testExecuteHooksHash() external view {
         Call[] memory calls = new Call[](2);
-        calls[0] = Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false });
-        calls[1] = Call({ target: address(0), callData: hex"00112233", value: 200000000, allowFailure: false });
+        calls[0] =
+            Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false });
+        calls[1] = Call({
+            target: address(0),
+            callData: hex"00112233",
+            value: 200000000,
+            allowFailure: false,
+            isDelegateCall: false
+        });
 
         bytes32 nonce = bytes32(uint256(1));
         uint256 deadline = 1714971380;
@@ -16,33 +26,47 @@ contract LibAuthenticatedHooksTest is BaseTest {
         bytes32 domainSeparator = 0xee788037c7d4fa9c073bf2b8e7afce63bf881a78fcf90302e3f8cad15ca4af07;
         bytes32 hashToSign = cproxy.hashToSign(calls, nonce, deadline, domainSeparator);
 
-        assertEq(messageHash, 0xdf2a2245607caac188878c5177f384415d6bbbdd7687d86979b89fc96c15fa2a, "!messageHash");
-        assertEq(hashToSign, 0x6eaf52b8339dba7c32dd6f6e699c25188dbbd12f525121ef6477e96c1f072e1c, "!hashToSign");
+        assertEq(messageHash, 0xfdfaa629a4ccbc74f5c5e09411b43f43bf784226ea9bb2429b5590d1fb1dd61c, "!messageHash");
+        assertEq(hashToSign, 0xe4425792fb560082f152a9507016920e2d06c299ed99e9735a9746af8ed2cca4, "!hashToSign");
     }
 
     function testCallHash() external view {
-        Call memory call1 = Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false });
-        Call memory call2 = Call({ target: address(0), callData: hex"00112233", value: 200000000, allowFailure: false });
+        Call memory call1 =
+            Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false });
+        Call memory call2 = Call({
+            target: address(0),
+            callData: hex"00112233",
+            value: 200000000,
+            allowFailure: false,
+            isDelegateCall: false
+        });
 
         assertEq(
             cproxy.callHash(call1),
-            0x65ae2bbeaa5da85dd45f563d3feef6f9aea38138474bb748b142d193f1b6cace,
+            0x6505d7fa293f4e4fb4490e893a91a8e38fab543fe3aa1bd49a27e37bf0780042,
             "!callHash call1"
         );
         assertEq(
             cproxy.callHash(call2),
-            0x8cd5bdd9f36a3fa11a240f1607a4de06fec37e2e8d581985e540a974b28b2d8d,
+            0x6dd53e776c087d4bf391dc9ae7b7b97e46d7596b38466bc5a515f1b595057d97,
             "!callHash call2"
         );
     }
 
     function testCallsHash() external view {
         Call[] memory calls = new Call[](2);
-        calls[0] = Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false });
-        calls[1] = Call({ target: address(0), callData: hex"00112233", value: 200000000, allowFailure: false });
+        calls[0] =
+            Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false });
+        calls[1] = Call({
+            target: address(0),
+            callData: hex"00112233",
+            value: 200000000,
+            allowFailure: false,
+            isDelegateCall: false
+        });
 
         assertEq(
-            cproxy.callsHash(calls), 0xe6b3545d63155e33472ceaaf3bb7536ebe748edf721e23e430c9eb16c2893924, "!callsHash"
+            cproxy.callsHash(calls), 0xe65450745395eb2e3a3ffec0004f7ba31fdb304a65c1d7d4e443a59110c5e6f3, "!callsHash"
         );
     }
 

@@ -11,9 +11,10 @@ contract COWShedFactoryTest is BaseTest {
         address addr2 = makeAddr("addr2");
 
         Call[] memory calls = new Call[](2);
-        calls[0] = Call({ target: addr1, value: 0, callData: hex"00112233", allowFailure: false });
+        calls[0] =
+            Call({ target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false });
 
-        calls[1] = Call({ target: addr2, value: 0, callData: hex"11", allowFailure: false });
+        calls[1] = Call({ target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false });
 
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");

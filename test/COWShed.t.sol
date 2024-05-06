@@ -16,6 +16,12 @@ contract Stub {
     function returnUint() external pure returns (uint256) {
         return 420;
     }
+
+    function storeAt(bytes32 slot, bytes32 value) external {
+        assembly {
+            sstore(slot, value)
+        }
+    }
 }
 
 contract COWShedTest is BaseTest {
@@ -30,10 +36,16 @@ contract COWShedTest is BaseTest {
             target: address(stub),
             value: 0.05 ether,
             allowFailure: false,
-            callData: abi.encodeCall(stub.callWithValue, ())
+            callData: abi.encodeCall(stub.callWithValue, ()),
+            isDelegateCall: false
         });
-        calls[1] =
-            Call({ target: address(stub), value: 0, allowFailure: true, callData: abi.encodeCall(stub.willRevert, ()) });
+        calls[1] = Call({
+            target: address(stub),
+            value: 0,
+            allowFailure: true,
+            callData: abi.encodeCall(stub.willRevert, ()),
+            isDelegateCall: false
+        });
         bytes32 nonce = "1";
 
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
@@ -59,7 +71,8 @@ contract COWShedTest is BaseTest {
 
     function testExecuteHooksDeadline() external {
         Call[] memory calls = new Call[](1);
-        calls[0] = Call({ target: address(0), value: 0, allowFailure: false, callData: hex"0011" });
+        calls[0] =
+            Call({ target: address(0), value: 0, allowFailure: false, callData: hex"0011", isDelegateCall: false });
         bytes32 nonce = "deadline-nonce";
         uint256 deadline = block.timestamp - 1;
         bytes memory signature = _signForProxy(calls, nonce, deadline, user);
@@ -67,9 +80,35 @@ contract COWShedTest is BaseTest {
         userProxy.executeHooks(calls, nonce, deadline, signature);
     }
 
+    function testExecuteHooksDelegateCall() external {
+        bytes32 randomSlot = keccak256("randomSlot");
+        bytes32 randomValue = keccak256("randomValue");
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({
+            target: address(stub),
+            callData: abi.encodeCall(Stub.storeAt, (randomSlot, randomValue)),
+            value: 0,
+            allowFailure: false,
+            isDelegateCall: true
+        });
+        bytes32 nonce = "delegatecall-nonce";
+        uint256 deadline = _deadline();
+
+        bytes32 prev = vm.load(userProxyAddr, randomSlot);
+        assertEq(prev, bytes32(0), "randomSlot is already set");
+
+        bytes memory signature = _signForProxy(calls, nonce, deadline, user);
+        userProxy.executeHooks(calls, nonce, deadline, signature);
+
+        bytes32 aftr = vm.load(userProxyAddr, randomSlot);
+        assertEq(aftr, randomValue, "randomSlot not set as expected from the delegatecall");
+    }
+
     function testRevokeNonce() external {
         Call[] memory calls = new Call[](1);
-        calls[0] = Call({ target: address(0), callData: hex"0011", value: 0, allowFailure: false });
+        calls[0] =
+            Call({ target: address(0), callData: hex"0011", value: 0, allowFailure: false, isDelegateCall: false });
         bytes32 nonce = "nonce-to-revoke";
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
         assertFalse(userProxy.nonces(nonce), "nonce is already used");
@@ -91,7 +130,8 @@ contract COWShedTest is BaseTest {
             target: address(userProxy),
             callData: abi.encodeCall(COWShed.updateTrustedExecutor, (addr)),
             allowFailure: false,
-            value: 0
+            value: 0,
+            isDelegateCall: false
         });
         bytes32 nonce = "1";
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
@@ -113,7 +153,8 @@ contract COWShedTest is BaseTest {
             target: address(userProxy),
             callData: abi.encodeCall(COWShed.updateTrustedExecutor, (addr)),
             allowFailure: false,
-            value: 0
+            value: 0,
+            isDelegateCall: false
         });
         bytes32 nonce = "1";
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
@@ -138,10 +179,16 @@ contract COWShedTest is BaseTest {
             target: address(stub),
             value: 0.05 ether,
             allowFailure: false,
-            callData: abi.encodeCall(stub.callWithValue, ())
+            callData: abi.encodeCall(stub.callWithValue, ()),
+            isDelegateCall: false
         });
-        calls[1] =
-            Call({ target: address(stub), value: 0, allowFailure: true, callData: abi.encodeCall(stub.willRevert, ()) });
+        calls[1] = Call({
+            target: address(stub),
+            value: 0,
+            allowFailure: true,
+            callData: abi.encodeCall(stub.willRevert, ()),
+            isDelegateCall: false
+        });
         bytes32 nonce = "1";
         bytes memory sig =
             _signWithSmartWalletForProxy(calls, nonce, _deadline(), smartWalletAddr, smartWalletProxyAddr);

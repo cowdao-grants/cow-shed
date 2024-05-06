@@ -3,6 +3,7 @@ struct Call {
     uint256 value;
     bytes callData;
     bool allowFailure;
+    bool isDelegateCall;
 }
 
 interface ICOWAuthHook {

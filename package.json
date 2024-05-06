@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "ethers": "^6.12.1",
+    "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
+  }
+}
