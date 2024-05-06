@@ -11,7 +11,7 @@ bytes32 constant IMPLEMENTATION_STORAGE_SLOT = 0x360894a13ba1a3210667c828492db98
 contract COWShedStorage {
     struct State {
         bool initialized;
-        mapping(address => bool) trustedExecutors;
+        address trustedExecutor;
         mapping(bytes32 => bool) nonces;
     }
 
@@ -41,7 +41,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     error AlreadyInitialized();
     error OnlyAdmin();
 
-    event TrustedExecutorUpdated(address indexed who, bool authorized);
+    event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event AdminChanged(address previousAdmin, address newAdmin);
     event Upgraded(address indexed implementation);
 
@@ -49,7 +49,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     modifier onlyTrustedExecutor() {
-        if (!_state().trustedExecutors[msg.sender]) {
+        if (msg.sender != _state().trustedExecutor) {
             revert OnlyTrustedExecutor();
         }
         _;
@@ -69,7 +69,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         emit Upgraded(implementation);
 
         LibAuthenticatedHooks.executeCalls(calls);
-        this.updateTrustedExecutor(factory, true);
+        this.updateTrustedExecutor(factory);
     }
 
     function executeHooks(Call[] calldata calls, bytes32 nonce, bytes calldata signature) external {
@@ -86,20 +86,13 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         LibAuthenticatedHooks.executeCalls(calls);
     }
 
-    function trustedExecutors(address who) external view returns (bool) {
-        return _state().trustedExecutors[who];
-    }
-
-    function nonces(bytes32 nonce) external view returns (bool) {
-        return _state().nonces[nonce];
-    }
-
-    function updateTrustedExecutor(address who, bool authorized) external {
+    function updateTrustedExecutor(address who) external {
         if (msg.sender != address(this)) {
             revert OnlySelf();
         }
-        _state().trustedExecutors[who] = authorized;
-        emit TrustedExecutorUpdated(who, authorized);
+        address prev = _state().trustedExecutor;
+        _state().trustedExecutor = who;
+        emit TrustedExecutorChanged(prev, who);
     }
 
     function updateImplementation(address newImplementation) external {
@@ -112,6 +105,12 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         emit Upgraded(newImplementation);
     }
 
+    receive() external payable { }
+
+    function nonces(bytes32 nonce) external view returns (bool) {
+        return _state().nonces[nonce];
+    }
+
     function domainSeparator() public view returns (bytes32) {
         string memory name = "COWShed";
         string memory version = "1.0.0";
@@ -120,7 +119,9 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         );
     }
 
-    receive() external payable { }
+    function trustedExecutor() external view returns (address) {
+        return _state().trustedExecutor;
+    }
 
     function _consumeNonce(bytes32 _nonce) internal {
         if (_state().nonces[_nonce]) {
