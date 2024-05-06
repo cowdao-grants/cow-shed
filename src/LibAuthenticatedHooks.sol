@@ -90,8 +90,11 @@ library LibAuthenticatedHooks {
         uint256 nCalls = calls.length;
         bytes32[] memory hashes = new bytes32[](nCalls);
 
-        for (uint256 i = 0; i < nCalls; i++) {
+        for (uint256 i = 0; i < nCalls;) {
             hashes[i] = callHash(calls[i]);
+            unchecked {
+                ++i;
+            }
         }
 
         assembly ("memory-safe") {
