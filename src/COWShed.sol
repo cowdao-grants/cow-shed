@@ -11,6 +11,7 @@ bytes32 constant IMPLEMENTATION_STORAGE_SLOT = 0x360894a13ba1a3210667c828492db98
 contract COWShedStorage {
     struct State {
         bool initialized;
+        mapping(address => bool) trustedExecutors;
         mapping(bytes32 => bool) nonces;
     }
 
@@ -35,17 +36,26 @@ contract COWShedStorage {
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
     error NonceAlreadyUsed();
+    error OnlyTrustedExecutor();
     error OnlySelf();
     error AlreadyInitialized();
     error OnlyAdmin();
 
+    event TrustedExecutorUpdated(address indexed who, bool authorized);
     event AdminChanged(address previousAdmin, address newAdmin);
     event Upgraded(address indexed implementation);
 
     bytes32 internal constant domainTypeHash =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
-    function initialize(address implementation, address admin, Call[] calldata calls) external {
+    modifier onlyTrustedExecutor() {
+        if (!_state().trustedExecutors[msg.sender]) {
+            revert OnlyTrustedExecutor();
+        }
+        _;
+    }
+
+    function initialize(address implementation, address admin, address factory, Call[] calldata calls) external {
         if (_state().initialized) {
             revert AlreadyInitialized();
         }
@@ -59,6 +69,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         emit Upgraded(implementation);
 
         LibAuthenticatedHooks.executeCalls(calls);
+        this.updateTrustedExecutor(factory, true);
     }
 
     function executeHooks(Call[] calldata calls, bytes32 nonce, bytes calldata signature) external {
@@ -70,8 +81,25 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _executeCalls(calls, nonce);
     }
 
+    /// @custom:todo doesn't make sense to commit some other contract's sigs nonce here.
+    function trustedExecuteHooks(Call[] calldata calls) external onlyTrustedExecutor {
+        LibAuthenticatedHooks.executeCalls(calls);
+    }
+
+    function trustedExecutors(address who) external view returns (bool) {
+        return _state().trustedExecutors[who];
+    }
+
     function nonces(bytes32 nonce) external view returns (bool) {
         return _state().nonces[nonce];
+    }
+
+    function updateTrustedExecutor(address who, bool authorized) external {
+        if (msg.sender != address(this)) {
+            revert OnlySelf();
+        }
+        _state().trustedExecutors[who] = authorized;
+        emit TrustedExecutorUpdated(who, authorized);
     }
 
     function updateImplementation(address newImplementation) external {

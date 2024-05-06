@@ -10,13 +10,13 @@ contract COWShedProxyTest is BaseTest {
         assertAdminAndImpl(address(proxy), address(0), address(0));
 
         vm.expectRevert(COWShedProxy.InvalidInitialization.selector);
-        COWShed(payable(address(proxy))).domainSeparator();
+        COWShed(payable(address(proxy))).trustedExecuteHooks(new Call[](0));
 
-        COWShed(payable(address(proxy))).initialize(address(cowshed), address(this), new Call[](0));
+        COWShed(payable(address(proxy))).initialize(address(cowshed), address(this), address(factory), new Call[](0));
         assertAdminAndImpl(address(proxy), address(this), address(cowshed));
 
         // shouldnt initialize again
         vm.expectRevert(COWShed.AlreadyInitialized.selector);
-        COWShed(payable(address(proxy))).initialize(address(cowshed), address(this), new Call[](0));
+        COWShed(payable(address(proxy))).initialize(address(cowshed), address(this), address(factory), new Call[](0));
     }
 }

@@ -6,7 +6,7 @@ import { BaseTest } from "./BaseTest.sol";
 contract Stub {
     error Revert();
 
-    function willRevert() external pure {
+    function willRevert() external {
         revert Revert();
     }
 
@@ -22,7 +22,7 @@ contract COWShedTest is BaseTest {
 
     function testExecuteHooks() external {
         // fund the proxy
-        vm.deal(userProxyAddr, 1 ether);
+        userProxyAddr.call{ value: 1 ether }("");
 
         Call[] memory calls = new Call[](2);
         calls[0] = Call({
@@ -56,6 +56,46 @@ contract COWShedTest is BaseTest {
         userProxy.executeHooks(calls, nonce, signature);
     }
 
+    function testTrustedExecuteHooks() external {
+        address addr = makeAddr("addr");
+        assertFalse(COWShed(payable(userProxy)).trustedExecutors(addr), "should not be a trusted executor");
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({
+            target: address(userProxy),
+            callData: abi.encodeCall(COWShed.updateTrustedExecutor, (addr, true)),
+            allowFailure: false,
+            value: 0
+        });
+        bytes32 nonce = "1";
+        bytes memory signature = _signForProxy(calls, nonce, user);
+        userProxy.executeHooks(calls, nonce, signature);
+
+        vm.prank(addr);
+        vm.expectCall(address(0), hex"1234");
+        calls[0].target = address(0);
+        calls[0].callData = hex"1234";
+        userProxy.trustedExecuteHooks(calls);
+    }
+
+    function testUpdateTrustedHook() external {
+        address addr = makeAddr("addr");
+        assertFalse(COWShed(payable(userProxy)).trustedExecutors(addr), "should not be a trusted executor");
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({
+            target: address(userProxy),
+            callData: abi.encodeCall(COWShed.updateTrustedExecutor, (addr, true)),
+            allowFailure: false,
+            value: 0
+        });
+        bytes32 nonce = "1";
+        bytes memory signature = _signForProxy(calls, nonce, user);
+        userProxy.executeHooks(calls, nonce, signature);
+
+        assertTrue(COWShed(payable(userProxy)).trustedExecutors(addr), "should be a trusted executor");
+    }
+
     function testUpdateImplementation() external {
         vm.prank(user.addr);
         userProxy.updateImplementation(address(stub));
@@ -65,7 +105,7 @@ contract COWShedTest is BaseTest {
 
     function testExecuteHooksForSmartAccount() external {
         // fund the proxy
-        vm.deal(smartWalletProxyAddr, 1 ether);
+        smartWalletProxyAddr.call{ value: 1 ether }("");
 
         Call[] memory calls = new Call[](2);
         calls[0] = Call({
