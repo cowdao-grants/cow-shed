@@ -1,6 +1,6 @@
-import { COWShed, COWShedProxy, Call } from "src/COWShed.sol";
+import { COWShed, Call } from "src/COWShed.sol";
 import { Test, Vm } from "forge-std/Test.sol";
-import { COWShedFactory } from "src/COWShedFactory.sol";
+import { COWShedFactory, COWShedProxy } from "src/COWShedFactory.sol";
 import { BaseTest } from "./BaseTest.sol";
 import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 

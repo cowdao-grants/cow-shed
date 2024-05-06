@@ -1,8 +1,9 @@
 import { COWShedFactory } from "src/COWShedFactory.sol";
 import { Vm, Test } from "forge-std/Test.sol";
 import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
-import { ADMIN_STORAGE_SLOT, COWShed } from "src/COWShed.sol";
+import { COWShed } from "src/COWShed.sol";
 import { BaseTest } from "./BaseTest.sol";
+import { ADMIN_STORAGE_SLOT } from "src/COWShedStorage.sol";
 
 contract COWShedFactoryTest is BaseTest {
     function testExecuteHooks() external {

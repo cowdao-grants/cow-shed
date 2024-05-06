@@ -1,7 +1,8 @@
 import { Test, Vm } from "forge-std/Test.sol";
-import { COWShed, Call, ADMIN_STORAGE_SLOT, IMPLEMENTATION_STORAGE_SLOT } from "src/COWShed.sol";
+import { COWShed, Call } from "src/COWShed.sol";
 import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 import { COWShedFactory } from "src/COWShedFactory.sol";
+import { ADMIN_STORAGE_SLOT, IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
 
 contract LibAuthenticatedHooksCalldataProxy {
     function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
