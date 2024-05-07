@@ -3,6 +3,12 @@ import { COWShed, Call } from "src/COWShed.sol";
 import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 import { COWShedFactory } from "src/COWShedFactory.sol";
 import { IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
+import { ENS, INameResolver, IAddrResolver } from "src/ens.sol";
+import { LibString } from "solady/utils/LibString.sol";
+
+interface ICustomVM {
+    function ensNamehash(string calldata) external pure returns (bytes32);
+}
 
 contract LibAuthenticatedHooksCalldataProxy {
     function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
@@ -67,7 +73,10 @@ contract BaseTest is Test {
     address userProxyAddr;
     COWShed userProxy;
     COWShed cowshedImpl = new COWShed();
-    COWShedFactory factory = new COWShedFactory(address(cowshedImpl));
+    bytes32 baseName = "cowhooks.eth";
+    bytes32 baseNode = 0x8f8ff4ebd0ab36d517ed7387211b245b7d5508f4ed33be607a3ab54050f650d6;
+
+    COWShedFactory factory;
     LibAuthenticatedHooksCalldataProxy cproxy = new LibAuthenticatedHooksCalldataProxy();
 
     address smartWalletAddr;
@@ -75,7 +84,15 @@ contract BaseTest is Test {
     address smartWalletProxyAddr;
     COWShed smartWalletProxy;
 
+    ICustomVM customVm = ICustomVM(address(vm));
+
     function setUp() external virtual {
+        uint256 nonce = vm.getNonce(address(this));
+        address factoryAddressExpected = vm.computeCreateAddress(address(this), nonce);
+        _setOwnerForEns(baseNode, address(factoryAddressExpected));
+        factory = new COWShedFactory(address(cowshedImpl), baseName, baseNode);
+        assertEq(address(factory), factoryAddressExpected, "factory address as not expected");
+
         user = vm.createWallet("user");
         userProxyAddr = factory.proxyOf(user.addr);
         userProxy = COWShed(payable(userProxyAddr));
@@ -86,6 +103,10 @@ contract BaseTest is Test {
         smartWalletProxyAddr = factory.proxyOf(smartWalletAddr);
         smartWalletProxy = COWShed(payable(smartWalletProxyAddr));
         _initializeSmartWalletProxy(smartWalletAddr);
+
+        assertEq(
+            _reverseResolve(0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045), "vitalik.eth", "reverse resolve impl failed"
+        );
     }
 
     function _initializeUserProxy(Vm.Wallet memory _wallet) internal returns (bytes memory signature) {
@@ -167,5 +188,26 @@ contract BaseTest is Test {
 
     function _deadline() internal view returns (uint256) {
         return block.timestamp + 1 hours;
+    }
+
+    function _resolveAddr(bytes32 node) internal view returns (address) {
+        return IAddrResolver(ENS.resolver(node)).addr(node);
+    }
+
+    function _reverseResolve(address addr) internal view returns (string memory) {
+        bytes32 node =
+            customVm.ensNamehash(string(abi.encodePacked(LibString.toHexStringNoPrefix(addr), ".", "addr.reverse")));
+        return INameResolver(ENS.resolver(node)).name(node);
+    }
+
+    function _recordOwnerSlotInEns(bytes32 node) internal pure returns (bytes32) {
+        // records mapping is in slot 0
+        // rest determined with https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#mappings-and-dynamic-arrays
+        return keccak256(abi.encode(node, 0));
+    }
+
+    function _setOwnerForEns(bytes32 node, address owner) internal {
+        vm.store(address(ENS), _recordOwnerSlotInEns(node), bytes32(uint256(uint160(address(owner)))));
+        assertEq(ENS.owner(node), address(owner), "ens owner not set as expected");
     }
 }

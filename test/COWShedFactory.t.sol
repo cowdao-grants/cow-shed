@@ -3,6 +3,11 @@ import { Vm, Test } from "forge-std/Test.sol";
 import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
 import { COWShed } from "src/COWShed.sol";
 import { BaseTest } from "./BaseTest.sol";
+import { LibString } from "solady/utils/LibString.sol";
+
+interface CustomVm {
+    function namehash(string calldata name) external pure returns (bytes32);
+}
 
 contract COWShedFactoryTest is BaseTest {
     function testExecuteHooks() external {
@@ -46,6 +51,38 @@ contract COWShedFactoryTest is BaseTest {
         assertTrue(
             proxy1.domainSeparator() != proxy2.domainSeparator(),
             "different proxies should have different domain separators"
+        );
+    }
+
+    function testForwardResolve() external view {
+        assertEq(
+            _resolveAddr(
+                customVm.ensNamehash(
+                    string(abi.encodePacked(LibString.toHexString(user.addr), ".", LibString.fromSmallString(baseName)))
+                )
+            ),
+            userProxyAddr
+        );
+        assertEq(
+            _resolveAddr(
+                customVm.ensNamehash(
+                    string(
+                        abi.encodePacked(
+                            LibString.toHexStringChecksummed(user.addr), ".", LibString.fromSmallString(baseName)
+                        )
+                    )
+                )
+            ),
+            userProxyAddr
+        );
+    }
+
+    function testReverseResolve() external view {
+        assertEq(
+            _reverseResolve(userProxyAddr),
+            string(
+                abi.encodePacked(LibString.toHexStringChecksummed(user.addr), ".", LibString.fromSmallString(baseName))
+            )
         );
     }
 }
