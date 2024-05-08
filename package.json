@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build": "tsc"
+  },
   "dependencies": {
     "ethers": "^6.12.1",
     "typescript": "^5.4.5"
