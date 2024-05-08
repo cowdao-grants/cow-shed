@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 import { ECDSA } from "solady/utils/ECDSA.sol";
 import { Call } from "./ICOWAuthHook.sol";
 

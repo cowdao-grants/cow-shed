@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 import { COWShedStorage, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
 import { COWShed, Call } from "./COWShed.sol";
 import { Proxy } from "openzeppelin-contracts/contracts/proxy/Proxy.sol";

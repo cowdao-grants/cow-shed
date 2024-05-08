@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 /// @dev IReverseRegistrar interface as defined in ENSIP-3.
 ///      See: https://github.com/ensdomains/ens-contracts/blob/8e8cf71bc50fb1a5055dcf3d523d2ed54e725d28/contracts/reverseRegistrar/IReverseRegistrar.sol
 interface IReverseRegistrar {

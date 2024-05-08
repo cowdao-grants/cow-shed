@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
 import { Test } from "forge-std/Test.sol";
 import { BaseTest } from "./BaseTest.sol";
