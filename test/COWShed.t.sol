@@ -7,6 +7,7 @@ import { COWShedFactory, COWShedProxy } from "src/COWShedFactory.sol";
 import { BaseTest } from "./BaseTest.sol";
 import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 
+/// @dev dummy contract
 contract Stub {
     error Revert();
 

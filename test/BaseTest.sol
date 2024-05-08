@@ -9,6 +9,8 @@ import { IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
 import { ENS, INameResolver, IAddrResolver } from "src/ens.sol";
 import { LibString } from "solady/utils/LibString.sol";
 
+/// @dev wrapper contract since the LibAuthenticatedHooks library only accepts
+///      `calldata` params, not `memory` params.
 contract LibAuthenticatedHooksCalldataProxy {
     function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
         external
@@ -39,6 +41,8 @@ contract LibAuthenticatedHooksCalldataProxy {
     }
 }
 
+/// @dev Simple single owner smart wallet account that will verify signatures against
+///      pre-approved and stored signatures for given hashes.
 contract SmartWallet {
     error OnlyOwner();
 

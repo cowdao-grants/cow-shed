@@ -19,6 +19,8 @@ contract COWShedProxy is COWShedStorage, Proxy {
         }
     }
 
+    /// @notice update implementation
+    /// @dev will proxy transparently for everyone except the admin.
     function updateImplementation(address newImplementation) external {
         if (msg.sender == ADMIN) {
             assembly {
@@ -32,6 +34,8 @@ contract COWShedProxy is COWShedStorage, Proxy {
         }
     }
 
+    /// @notice admin of the proxy.
+    /// @dev will proxy transparently for everyone except the proxy itself.
     function admin() external returns (address) {
         if (msg.sender == address(this)) {
             return ADMIN;
@@ -44,6 +48,7 @@ contract COWShedProxy is COWShedStorage, Proxy {
         }
     }
 
+    /// @dev revert until the initialization hasn't been completed.
     fallback() external payable override {
         if (!_state().initialized && msg.sig != COWShed.initialize.selector) revert InvalidInitialization();
         _fallback();
