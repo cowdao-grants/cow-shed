@@ -44,5 +44,7 @@ jobs:
           node-version: latest
           cache: yarn
           cache-dependency-path: yarn.lock
+      - name: Install dependencies
+        run: yarn
       - name: Build
         run: yarn build
