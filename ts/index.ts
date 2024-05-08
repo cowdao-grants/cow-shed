@@ -21,7 +21,7 @@ interface ISdkOptions {
 
 interface ICall {
   target: string;
-  value: bigint,
+  value: bigint;
   callData: string;
   allowFailure: boolean;
   isDelegateCall: boolean;
@@ -61,7 +61,7 @@ const FACTORY_INTERFACE: ethers.Interface = new ethers.Interface(FACTORY_ABI);
 const SHED_INTERFACE: ethers.Interface = new ethers.Interface(SHED_ABI);
 
 export class CowShedSdk {
-  constructor(private options: ISdkOptions) { }
+  constructor(private options: ISdkOptions) {}
 
   computeProxyAddress(user: string) {
     const salt = ABI_CODER.encode(['address'], [user]);
@@ -79,34 +79,85 @@ export class CowShedSdk {
   }
 
   computeDomainSeparator(proxy: string) {
-    return TYPED_DATA_ENCODER.hashStruct('EIP712Domain', this._getDomain(proxy));
+    return TYPED_DATA_ENCODER.hashStruct(
+      'EIP712Domain',
+      this._getDomain(proxy)
+    );
   }
 
-  hashToSignWithProxy(calls: ICall[], nonce: string, deadline: bigint, proxy: string) {
+  hashToSignWithProxy(
+    calls: ICall[],
+    nonce: string,
+    deadline: bigint,
+    proxy: string
+  ) {
     return this._hashToSign(calls, nonce, deadline, proxy);
   }
 
-  hashToSignWithUser(calls: ICall[], nonce: string, deadline: bigint, user: string) {
-    return this._hashToSign(calls, nonce, deadline, this.computeProxyAddress(user));
+  hashToSignWithUser(
+    calls: ICall[],
+    nonce: string,
+    deadline: bigint,
+    user: string
+  ) {
+    return this._hashToSign(
+      calls,
+      nonce,
+      deadline,
+      this.computeProxyAddress(user)
+    );
   }
 
-  static encodeExecuteHooksForFactory(calls: ICall[], nonce: string, deadline: bigint, user: string, signature: string) {
-    return FACTORY_INTERFACE.encodeFunctionData('executeHooks', [calls, nonce, deadline, user, signature]);
+  static encodeExecuteHooksForFactory(
+    calls: ICall[],
+    nonce: string,
+    deadline: bigint,
+    user: string,
+    signature: string
+  ) {
+    return FACTORY_INTERFACE.encodeFunctionData('executeHooks', [
+      calls,
+      nonce,
+      deadline,
+      user,
+      signature,
+    ]);
   }
 
-  static encodeExecuteHooksForProxy(calls: ICall[], nonce: string, deadline: bigint, signature: string) {
-    return SHED_INTERFACE.encodeFunctionData('executeHooks', [calls, nonce, deadline, signature]);
+  static encodeExecuteHooksForProxy(
+    calls: ICall[],
+    nonce: string,
+    deadline: bigint,
+    signature: string
+  ) {
+    return SHED_INTERFACE.encodeFunctionData('executeHooks', [
+      calls,
+      nonce,
+      deadline,
+      signature,
+    ]);
   }
 
   static encodeEOASignature(r: bigint, s: bigint, v: number) {
     return solidityPacked(['bytes32', 'bytes32', 'uint8'], [r, s, v]);
   }
 
-  private _hashToSign(calls: ICall[], nonce: string, deadline: bigint, proxy: string) {
+  private _hashToSign(
+    calls: ICall[],
+    nonce: string,
+    deadline: bigint,
+    proxy: string
+  ) {
     const message: IExecuteHooks = {
-      calls, nonce, deadline
+      calls,
+      nonce,
+      deadline,
     };
-    return TypedDataEncoder.hash(this._getDomain(proxy), COW_SHED_712_TYPES, message);
+    return TypedDataEncoder.hash(
+      this._getDomain(proxy),
+      COW_SHED_712_TYPES,
+      message
+    );
   }
 
   private _getDomain(proxy: string): TypedDataDomain {
