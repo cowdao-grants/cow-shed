@@ -6,10 +6,6 @@ import { IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
 import { ENS, INameResolver, IAddrResolver } from "src/ens.sol";
 import { LibString } from "solady/utils/LibString.sol";
 
-interface ICustomVM {
-    function ensNamehash(string calldata) external pure returns (bytes32);
-}
-
 contract LibAuthenticatedHooksCalldataProxy {
     function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
         external
@@ -83,8 +79,6 @@ contract BaseTest is Test {
     SmartWallet smartWallet;
     address smartWalletProxyAddr;
     COWShed smartWalletProxy;
-
-    ICustomVM customVm = ICustomVM(address(vm));
 
     function setUp() external virtual {
         uint256 nonce = vm.getNonce(address(this));
@@ -196,7 +190,7 @@ contract BaseTest is Test {
 
     function _reverseResolve(address addr) internal view returns (string memory) {
         bytes32 node =
-            customVm.ensNamehash(string(abi.encodePacked(LibString.toHexStringNoPrefix(addr), ".", "addr.reverse")));
+            vm.ensNamehash(string(abi.encodePacked(LibString.toHexStringNoPrefix(addr), ".", "addr.reverse")));
         return INameResolver(ENS.resolver(node)).name(node);
     }
 

@@ -5,10 +5,6 @@ import { COWShed } from "src/COWShed.sol";
 import { BaseTest } from "./BaseTest.sol";
 import { LibString } from "solady/utils/LibString.sol";
 
-interface CustomVm {
-    function namehash(string calldata name) external pure returns (bytes32);
-}
-
 contract COWShedFactoryTest is BaseTest {
     function testExecuteHooks() external {
         Vm.Wallet memory wallet = vm.createWallet("testWallet");
@@ -57,7 +53,7 @@ contract COWShedFactoryTest is BaseTest {
     function testForwardResolve() external view {
         assertEq(
             _resolveAddr(
-                customVm.ensNamehash(
+                vm.ensNamehash(
                     string(abi.encodePacked(LibString.toHexString(user.addr), ".", LibString.fromSmallString(baseName)))
                 )
             ),
@@ -65,7 +61,7 @@ contract COWShedFactoryTest is BaseTest {
         );
         assertEq(
             _resolveAddr(
-                customVm.ensNamehash(
+                vm.ensNamehash(
                     string(
                         abi.encodePacked(
                             LibString.toHexStringChecksummed(user.addr), ".", LibString.fromSmallString(baseName)
