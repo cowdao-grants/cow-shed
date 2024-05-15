@@ -9,7 +9,6 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
-    error NonceAlreadyUsed();
     error OnlyTrustedExecutor();
     error OnlySelf();
     error AlreadyInitialized();

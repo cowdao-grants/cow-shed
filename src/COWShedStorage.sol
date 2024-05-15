@@ -13,6 +13,8 @@ interface IAdminView {
 contract COWShedStorage {
     using LibBitmap for LibBitmap.Bitmap;
 
+    error NonceAlreadyUsed();
+
     struct State {
         bool initialized;
         address trustedExecutor;
@@ -33,6 +35,7 @@ contract COWShedStorage {
     }
 
     function _useNonce(bytes32 _nonce) internal {
+        if (_isNonceUsed(_nonce)) revert NonceAlreadyUsed();
         _state().nonces.set(uint256(_nonce));
     }
 
