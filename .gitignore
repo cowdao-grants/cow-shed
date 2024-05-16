@@ -14,3 +14,6 @@ docs/
 .env
 node_modules/
 dist/
+
+.envrc
+deploymentAddresses.json
