@@ -12,6 +12,7 @@ import {
   fnSelector,
   getTokenBalance,
   mockUsdcBalance,
+  resolveName,
   settleOrder,
   withAnvilProvider,
   wrapEther,
@@ -260,11 +261,6 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
     userAddr,
     proxyUsdcBalanceAfterBridge,
   });
-};
-
-const resolveName = (provider: ethers.JsonRpcProvider, name: string) => {
-  console.log('resolving name', name);
-  return provider.resolveName(name);
 };
 
 const main = async () => {
