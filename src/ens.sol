@@ -1,3 +1,5 @@
+/// @dev IReverseRegistrar interface as defined in ENSIP-3.
+///      See: https://github.com/ensdomains/ens-contracts/blob/8e8cf71bc50fb1a5055dcf3d523d2ed54e725d28/contracts/reverseRegistrar/IReverseRegistrar.sol
 interface IReverseRegistrar {
     function claim(address owner) external returns (bytes32 node);
     function claimWithResolver(address owner, address resolver) external returns (bytes32 node);
@@ -5,10 +7,14 @@ interface IReverseRegistrar {
     function node(address) external view returns (bytes32 node);
 }
 
+/// @dev INameResolver interface as defined in ENSIP-3
+///      See: https://github.com/ensdomains/ens-contracts/blob/8e8cf71bc50fb1a5055dcf3d523d2ed54e725d28/contracts/resolvers/profiles/INameResolver.sol
 interface INameResolver {
     function name(bytes32 node) external view returns (string memory);
 }
 
+/// @dev ENS registry interface as defined in ENSIP-1
+///      See: https://github.com/ensdomains/ens-contracts/blob/8e8cf71bc50fb1a5055dcf3d523d2ed54e725d28/contracts/registry/ENS.sol
 interface IENS {
     function setSubnodeRecord(bytes32 node, bytes32 label, address owner, address resolver, uint64 ttl) external;
     function resolver(bytes32 node) external view returns (address);
@@ -16,6 +22,8 @@ interface IENS {
     function setResolver(bytes32 node, address resolver) external;
 }
 
+/// @dev ENS address resolution interface as defined in ENSIP-1
+///      See: https://github.com/ensdomains/ens-contracts/blob/8e8cf71bc50fb1a5055dcf3d523d2ed54e725d28/contracts/resolvers/profiles/IAddrResolver.sol
 interface IAddrResolver {
     function addr(bytes32 node) external view returns (address);
 }
