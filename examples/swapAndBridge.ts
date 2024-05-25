@@ -14,12 +14,13 @@ import {
 import { ethers } from 'ethers_v6';
 import { CowShedSdk, ICall } from '../ts';
 
+// bridge contract address on ethereum mainnet
 const GNOSIS_CHAIN_BRIDGE = '0x88ad09518695c6c3712AC10a214bE5109a655671';
 
 const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
   provider: ethers.JsonRpcProvider,
   signers: ethers.Wallet[],
-  { factory, implementation, initCode }
+  { factory, implementation, proxyInitCode }
 ) => {
   const user = signers[1];
   const userAddr = await user.getAddress();
@@ -42,12 +43,12 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
     factoryAddress: factory,
     implementationAddress: implementation,
     chainId: 1,
-    proxyCreationCode: initCode,
+    proxyCreationCode: proxyInitCode,
   });
   const proxyAddress = shedSdk.computeProxyAddress(userAddr);
-  console.log('Proxy address for user', userAddr, 'is', proxyAddress);
+  console.log('Computed proxy address for user', userAddr, 'is', proxyAddress);
 
-  const buyAmount = 10_000000n;
+  const buyAmount = 10_000_000n;
   const validTo = Math.floor(new Date().getTime() / 1000) + 7200;
 
   const order: Order = {
@@ -72,7 +73,7 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
       target: USDC,
       callData: fnCalldata(
         'approve(address,uint256)',
-        ABI_CODER.encode(['address', 'uint'], [GNOSIS_CHAIN_BRIDGE, buyAmount])
+        ABI_CODER.encode(['address', 'uint256'], [GNOSIS_CHAIN_BRIDGE, buyAmount])
       ),
       value: 0n,
       isDelegateCall: false,
@@ -118,9 +119,20 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
     userAddr,
     encodedSignature
   );
+
+  let gasLimit: string;
+  try {
+    gasLimit = (await provider.estimateGas({
+      to: factory,
+      data: hooksCalldata
+    })).toString();
+  } catch (err) {
+    gasLimit = 100_000_000n.toString()
+  }
+
   const hooks = {
     post: [
-      { target: factory, callData: hooksCalldata, gasLimit: '1000000000' },
+      { target: factory, callData: hooksCalldata, gasLimit },
     ],
   };
 
@@ -136,7 +148,7 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
   const bridgeInitiatedLog = settleTx!.logs.find(
     (log) =>
       log.topics[0] ===
-        '0x59a9a8027b9c87b961e254899821c9a276b5efc35d1f7409ea4f291470f1629a' &&
+      '0x59a9a8027b9c87b961e254899821c9a276b5efc35d1f7409ea4f291470f1629a' &&
       log.address.toLowerCase() === GNOSIS_CHAIN_BRIDGE.toLowerCase()
   );
   if (bridgeInitiatedLog === undefined) {
@@ -176,7 +188,7 @@ const resolveName = (provider: ethers.JsonRpcProvider, name: string) => {
 };
 
 const main = async () => {
-  await withAnvilProvider(swapAndBridge, 6000_000);
+  await withAnvilProvider(swapAndBridge, 6_000_000);
 };
 
 main();

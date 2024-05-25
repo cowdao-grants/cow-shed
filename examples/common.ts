@@ -64,8 +64,7 @@ const deployCowShed = async (provider: ethers.JsonRpcProvider, key: string) => {
 
   const execPromise = new Promise((resolve, reject) => {
     exec(
-      `${forgePath} script ./script/Deploy.s.sol:DeployScript --sig "run(string)" ${ensName} --broadcast --rpc-url ${
-        provider._getConnection().url
+      `${forgePath} script ./script/Deploy.s.sol:DeployScript --sig "run(string)" ${ensName} --broadcast --rpc-url ${provider._getConnection().url
       } --private-key ${key}`,
       { cwd: parentDir },
       (error) => {
@@ -80,7 +79,7 @@ const deployCowShed = async (provider: ethers.JsonRpcProvider, key: string) => {
   const addresses: {
     factory: string;
     implementation: string;
-    initCode: string;
+    proxyInitCode: string;
   } = JSON.parse(
     await fs.promises.readFile(deploymentAddressesPath, {
       encoding: 'utf-8',
@@ -358,7 +357,7 @@ export const ABI_CODER = new ethers.AbiCoder();
 
 const fnSelector = (sig: string) => ethers.id(sig).slice(0, 10);
 
-// simple calldata encoding. used in multiple places where the funciton calls
+// simple calldata encoding. used in multiple places where the function calls
 // are simple and one off uses. its just cleaner to handcode it instead of
 // bloating it all with abis and ethers.Contract usages.
 export const fnCalldata = (sig: string, encodedData: string) =>
@@ -397,7 +396,7 @@ const getOrderFlags = (order: Order, signingScheme: SigningScheme) => {
 // sleep for given milliseconds
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// try and get signer, if not available, impersonte and then get signer
+// try and get signer, if not available, impersonate and then get signer
 const getSigner = async (provider: ethers.JsonRpcProvider, who: string) => {
   try {
     return await provider.getSigner(who);

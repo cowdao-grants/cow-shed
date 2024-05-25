@@ -14,7 +14,7 @@ contract DeployScript is Script {
 
         string memory addrJson = "deploymentAddresses.json";
         vm.serializeAddress(addrJson, "factory", address(factory));
-        vm.serializeBytes(addrJson, "initCode", initCode);
+        vm.serializeBytes(addrJson, "proxyInitCode", initCode);
         string memory serialized = vm.serializeAddress(addrJson, "implementation", address(cowshed));
         vm.writeJson(serialized, "deploymentAddresses.json");
     }
