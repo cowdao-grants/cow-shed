@@ -10,7 +10,6 @@ contract COWShedFactory is COWShedResolver {
     event COWShedBuilt(address user, address shed);
 
     address public immutable implementation;
-    COWShedResolver public immutable resolver;
 
     mapping(address => address) public ownerOf;
 

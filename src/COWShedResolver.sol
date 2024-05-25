@@ -6,11 +6,11 @@ import { LibString } from "solady/utils/LibString.sol";
 abstract contract COWShedResolver is INameResolver, IAddrResolver {
     mapping(bytes32 => address) public reverseResolutionNodeToAddress;
     mapping(bytes32 => address) public forwardResolutionNodeToAddress;
-    bytes32 immutable baseName_;
+    bytes32 immutable baseNameSmallString;
     bytes32 immutable baseNode;
 
     constructor(bytes32 bName, bytes32 bNode) {
-        baseName_ = bName;
+        baseNameSmallString = bName;
         baseNode = bNode;
     }
 
@@ -27,7 +27,7 @@ abstract contract COWShedResolver is INameResolver, IAddrResolver {
     }
 
     function baseName() public view returns (string memory) {
-        return LibString.fromSmallString(baseName_);
+        return LibString.fromSmallString(baseNameSmallString);
     }
 
     function _setReverseNode(address user, address proxy) internal {

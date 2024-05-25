@@ -22,9 +22,11 @@ interface IAddrResolver {
 
 IReverseRegistrar constant REVERSE_REGISTRAR = IReverseRegistrar(0xa58E81fe9b61B5c3fE2AFD33CF304c454AbFc7Cb);
 IENS constant ENS = IENS(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e);
+/// @dev namehash of `addr.reverse`
 bytes32 constant ADDR_REVERSE_NODE = 0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2;
 
-bytes32 constant sha3HexLookup = 0x3031323334353637383961626364656600000000000000000000000000000000;
+/// @dev constant used in the sha3HexAddress, also copied over.
+bytes32 constant sha3HexLookup = "0123456789abcdef";
 
 /**
  * @dev An optimised function to compute the sha3 of the lower-case

@@ -70,7 +70,7 @@ contract BaseTest is Test {
     COWShed userProxy;
     COWShed cowshedImpl = new COWShed();
     bytes32 baseName = "cowhooks.eth";
-    bytes32 baseNode = 0x8f8ff4ebd0ab36d517ed7387211b245b7d5508f4ed33be607a3ab54050f650d6;
+    bytes32 baseNode = vm.ensNamehash(LibString.fromSmallString(baseName));
 
     COWShedFactory factory;
     LibAuthenticatedHooksCalldataProxy cproxy = new LibAuthenticatedHooksCalldataProxy();
