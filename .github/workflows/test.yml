@@ -32,3 +32,19 @@ jobs:
         run: |
           forge test -vvv --fork-url ${{ secrets.RPC_URL }}
         id: test
+  sdk_check:
+    strategy:
+      fail-fast: true
+    name: SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
+          cache: yarn
+          cache-dependency-path: yarn.lock
+      - name: Install dependencies
+        run: yarn
+      - name: Build
+        run: yarn build

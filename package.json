@@ -1,6 +1,9 @@
 {
+  "scripts": {
+    "build": "tsc"
+  },
   "dependencies": {
-    "ethers": "^6.12.1",
+    "ethers_v6": "npm:ethers@^6.12.1",
     "typescript": "^5.4.5"
   },
   "devDependencies": {

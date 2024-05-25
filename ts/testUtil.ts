@@ -1,4 +1,4 @@
-import { TypedDataEncoder, ZeroAddress } from 'ethers';
+import { TypedDataEncoder, ZeroAddress } from 'ethers_v6';
 
 interface ICall {
   target: string;
