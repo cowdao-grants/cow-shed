@@ -1,9 +1,13 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 import { COWShed, Call } from "src/COWShed.sol";
 import { Test, Vm } from "forge-std/Test.sol";
 import { COWShedFactory, COWShedProxy } from "src/COWShedFactory.sol";
 import { BaseTest } from "./BaseTest.sol";
 import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 
+/// @dev dummy contract
 contract Stub {
     error Revert();
 

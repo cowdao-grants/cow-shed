@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 import { ICOWAuthHook, Call } from "./ICOWAuthHook.sol";
 import { LibAuthenticatedHooks } from "./LibAuthenticatedHooks.sol";
 import { COWShedStorage, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
@@ -12,7 +15,6 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     error OnlyAdmin();
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
-    event AdminChanged(address previousAdmin, address newAdmin);
     event Upgraded(address indexed implementation);
 
     bytes32 internal constant domainTypeHash =
@@ -42,10 +44,12 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
         if (block.chainid == 1) {
             // transfer ownership of reverse ENS record to the factory contract
+            // and also set it as the resolver
             REVERSE_REGISTRAR.claimWithResolver(factory, factory);
         }
     }
 
+    /// @inheritdoc ICOWAuthHook
     function executeHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes calldata signature) external {
         address admin = _admin();
         (bool authorized) =
@@ -57,10 +61,12 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     }
 
     /// @custom:todo doesn't make sense to commit some other contract's sigs nonce here.
+    /// @inheritdoc ICOWAuthHook
     function trustedExecuteHooks(Call[] calldata calls) external onlyTrustedExecutor {
         LibAuthenticatedHooks.executeCalls(calls);
     }
 
+    /// @inheritdoc ICOWAuthHook
     function updateTrustedExecutor(address who) external {
         if (msg.sender != address(this)) {
             revert OnlySelf();
@@ -70,6 +76,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         emit TrustedExecutorChanged(prev, who);
     }
 
+    /// @notice Update the implementation of the proxy
     function updateImplementation(address newImplementation) external onlyAdmin {
         assembly {
             sstore(IMPLEMENTATION_STORAGE_SLOT, newImplementation)
@@ -79,15 +86,17 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     /// @notice Revoke a given nonce. Only the proxy owner/admin can do this.
     function revokeNonce(bytes32 nonce) external onlyAdmin {
-        _state().nonces[nonce] = true;
+        _consumeNonce(nonce);
     }
 
     receive() external payable { }
 
+    /// @notice returns if a nonce is already used.
     function nonces(bytes32 nonce) external view returns (bool) {
         return _state().nonces[nonce];
     }
 
+    /// @notice EIP712 domain separator for the user proxy.
     function domainSeparator() public view returns (bytes32) {
         string memory name = "COWShed";
         string memory version = "1.0.0";
@@ -96,6 +105,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         );
     }
 
+    /// @notice trusted executor that can execute arbitrary calls without signature verifications.
     function trustedExecutor() external view returns (address) {
         return _state().trustedExecutor;
     }

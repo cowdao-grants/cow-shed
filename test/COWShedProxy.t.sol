@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 import { COWShed, Call } from "src/COWShed.sol";
 import { BaseTest } from "./BaseTest.sol";
 import { IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";

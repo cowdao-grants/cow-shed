@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 import { COWShedStorage, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
 import { COWShed, Call } from "./COWShed.sol";
 import { Proxy } from "openzeppelin-contracts/contracts/proxy/Proxy.sol";
@@ -16,6 +19,8 @@ contract COWShedProxy is COWShedStorage, Proxy {
         }
     }
 
+    /// @notice update implementation
+    /// @dev will proxy transparently for everyone except the admin.
     function updateImplementation(address newImplementation) external {
         if (msg.sender == ADMIN) {
             assembly {
@@ -29,6 +34,8 @@ contract COWShedProxy is COWShedStorage, Proxy {
         }
     }
 
+    /// @notice admin of the proxy.
+    /// @dev will proxy transparently for everyone except the proxy itself.
     function admin() external returns (address) {
         if (msg.sender == address(this)) {
             return ADMIN;
@@ -41,6 +48,7 @@ contract COWShedProxy is COWShedStorage, Proxy {
         }
     }
 
+    /// @dev revert until the initialization has been completed.
     fallback() external payable override {
         if (!_state().initialized && msg.sig != COWShed.initialize.selector) revert InvalidInitialization();
         _fallback();

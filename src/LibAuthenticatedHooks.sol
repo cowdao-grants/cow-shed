@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.25;
+
 import { ECDSA } from "solady/utils/ECDSA.sol";
 import { Call } from "./ICOWAuthHook.sol";
 
@@ -9,13 +12,17 @@ library LibAuthenticatedHooks {
     error InvalidSignature();
     error DeadlineElapsed();
 
+    /// @dev EIP712 Call typehash
     bytes32 internal constant CALL_TYPE_HASH =
         keccak256("Call(address target,uint256 value,bytes callData,bool allowFailure,bool isDelegateCall)");
+    /// @dev EIP712 ExecuteHooks typehash
     bytes32 internal constant EXECUTE_HOOKS_TYPE_HASH = keccak256(
         "ExecuteHooks(Call[] calls,bytes32 nonce,uint256 deadline)Call(address target,uint256 value,bytes callData,bool allowFailure,bool isDelegateCall)"
     );
+    /// @dev magic value that is returned on successful validation of a signature from a EIP1271 smart account.
     bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
 
+    /// @dev verifies the deadline of the message and the signature against the executing payload.
     function authenticateHooks(
         Call[] calldata calls,
         bytes32 nonce,
@@ -42,6 +49,7 @@ library LibAuthenticatedHooks {
         }
     }
 
+    /// @dev the EIP712 hash to sign.
     function hashToSign(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes32 domainSeparator)
         internal
         pure
@@ -63,6 +71,7 @@ library LibAuthenticatedHooks {
         }
     }
 
+    /// @dev the `hashStruct` encoded hash for the given `ExecuteHooks` message.
     function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
         internal
         pure
@@ -86,6 +95,7 @@ library LibAuthenticatedHooks {
         }
     }
 
+    /// @dev the `encodeData` output for the provided calls' dynamic array.
     function callsHash(Call[] calldata calls) internal pure returns (bytes32 _callsHash) {
         uint256 nCalls = calls.length;
         bytes32[] memory hashes = new bytes32[](nCalls);
@@ -102,6 +112,7 @@ library LibAuthenticatedHooks {
         }
     }
 
+    /// @dev the `hashStruct` output for given call.
     function callHash(Call calldata cll) internal pure returns (bytes32 _callHash) {
         address target = cll.target;
         uint256 value = cll.value;
@@ -134,6 +145,7 @@ library LibAuthenticatedHooks {
         }
     }
 
+    /// @dev execute given calls
     function executeCalls(Call[] calldata calls) internal {
         for (uint256 i = 0; i < calls.length;) {
             Call memory call = calls[i];
@@ -157,6 +169,7 @@ library LibAuthenticatedHooks {
         }
     }
 
+    /// @dev decodes signatures for EOA as `<r><s><v>` from a packed message.
     function decodeEOASignature(bytes calldata signature) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         if (signature.length != 65) {
             revert InvalidSignature();
