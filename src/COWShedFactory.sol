@@ -48,7 +48,8 @@ contract COWShedFactory is COWShedResolver {
                 _setForwardNode(user, proxy);
             }
         }
-        // execute the hooks
+        // execute the hooks, the authorization checks are implemented in the
+        // COWShed.executeHooks function
         COWShed(payable(proxy)).executeHooks(calls, nonce, deadline, signature);
     }
 

@@ -10,7 +10,11 @@ struct Call {
 }
 
 interface ICOWAuthHook {
+    // @notice execute given calls after authenticating the signature,
+    //         verifying nonce isnt reused and that the deadline hasn't passed.
     function executeHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes calldata signature) external;
+    // @notice execute arbitrary calls, only callable by the trusted executor.
     function trustedExecuteHooks(Call[] calldata calls) external;
+    // @notice update the trusted executor.
     function updateTrustedExecutor(address who) external;
 }

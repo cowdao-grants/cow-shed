@@ -48,7 +48,7 @@ contract COWShedProxy is COWShedStorage, Proxy {
         }
     }
 
-    /// @dev revert until the initialization hasn't been completed.
+    /// @dev revert until the initialization has been completed.
     fallback() external payable override {
         if (!_state().initialized && msg.sig != COWShed.initialize.selector) revert InvalidInitialization();
         _fallback();

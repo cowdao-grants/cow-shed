@@ -105,7 +105,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         );
     }
 
-    /// @notice trusted executor that can execute arbitrary calls withoutt signature verifications.
+    /// @notice trusted executor that can execute arbitrary calls without signature verifications.
     function trustedExecutor() external view returns (address) {
         return _state().trustedExecutor;
     }
