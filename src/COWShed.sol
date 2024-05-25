@@ -1,6 +1,7 @@
 import { ICOWAuthHook, Call } from "./ICOWAuthHook.sol";
 import { LibAuthenticatedHooks } from "./LibAuthenticatedHooks.sol";
 import { COWShedStorage, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
+import { REVERSE_REGISTRAR } from "./ens.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
@@ -38,6 +39,11 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _state().initialized = true;
         _state().trustedExecutor = factory;
         emit TrustedExecutorChanged(address(0), factory);
+
+        if (block.chainid == 1) {
+            // transfer ownership of reverse ENS record to the factory contract
+            REVERSE_REGISTRAR.claimWithResolver(factory, factory);
+        }
     }
 
     function executeHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes calldata signature) external {

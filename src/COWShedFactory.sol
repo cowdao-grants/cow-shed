@@ -1,8 +1,9 @@
 import { COWShed } from "./COWShed.sol";
 import { Call } from "./ICOWAuthHook.sol";
 import { COWShedProxy } from "./COWShedProxy.sol";
+import { COWShedResolver } from "./COWShedResolver.sol";
 
-contract COWShedFactory {
+contract COWShedFactory is COWShedResolver {
     error InvalidSignature();
     error NonceAlreadyUsed();
 
@@ -10,7 +11,9 @@ contract COWShedFactory {
 
     address public immutable implementation;
 
-    constructor(address impl) payable {
+    mapping(address => address) public ownerOf;
+
+    constructor(address impl, bytes32 bName, bytes32 bNode) COWShedResolver(bName, bNode) {
         implementation = impl;
     }
 
@@ -26,6 +29,13 @@ contract COWShedFactory {
             COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }(implementation, user);
             COWShed(payable(proxy)).initialize(address(this));
             emit COWShedBuilt(user, address(newProxy));
+
+            ownerOf[proxy] = user;
+
+            if (block.chainid == 1) {
+                _setReverseNode(user, proxy);
+                _setForwardNode(user, proxy);
+            }
         }
         COWShed(payable(proxy)).executeHooks(calls, nonce, deadline, signature);
     }
