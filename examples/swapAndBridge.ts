@@ -2,16 +2,21 @@ import { Order, OrderBalance, OrderKind } from '@cowprotocol/contracts';
 import {
   ABI_CODER,
   USDC,
+  USDC_BALANCE_OF_SLOT,
   VAULT_RELAYER,
   WETH,
   approveToken,
   createOrder,
+  estimateGasForExecuteHooks,
   fnCalldata,
+  getTokenBalance,
+  mockUsdcBalance,
   settleOrder,
+  sleep,
   withAnvilProvider,
   wrapEther,
 } from './common';
-import { ethers } from 'ethers_v6';
+import { MaxUint256, ethers } from 'ethers_v6';
 import { CowShedSdk, ICall } from '../ts';
 
 // bridge contract address on ethereum mainnet
@@ -73,7 +78,10 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
       target: USDC,
       callData: fnCalldata(
         'approve(address,uint256)',
-        ABI_CODER.encode(['address', 'uint256'], [GNOSIS_CHAIN_BRIDGE, buyAmount])
+        ABI_CODER.encode(
+          ['address', 'uint256'],
+          [GNOSIS_CHAIN_BRIDGE, buyAmount]
+        )
       ),
       value: 0n,
       isDelegateCall: false,
@@ -120,20 +128,25 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
     encodedSignature
   );
 
-  let gasLimit: string;
-  try {
-    gasLimit = (await provider.estimateGas({
-      to: factory,
-      data: hooksCalldata
-    })).toString();
-  } catch (err) {
-    gasLimit = 100_000_000n.toString()
-  }
+  const prevBalance = await getTokenBalance(provider, USDC, proxyAddress);
+  const newBalance = MaxUint256 >> 1n;
+  const setProxyBalance = async () =>
+    mockUsdcBalance(provider, proxyAddress, newBalance);
+  const resetProxyBalance = async () =>
+    mockUsdcBalance(provider, proxyAddress, prevBalance);
+
+  const gasLimit = (
+    await estimateGasForExecuteHooks(
+      provider,
+      factory,
+      hooksCalldata,
+      setProxyBalance,
+      resetProxyBalance
+    )
+  ).toString();
 
   const hooks = {
-    post: [
-      { target: factory, callData: hooksCalldata, gasLimit },
-    ],
+    post: [{ target: factory, callData: hooksCalldata, gasLimit }],
   };
 
   // create order

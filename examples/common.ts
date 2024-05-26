@@ -1,7 +1,7 @@
 import { createAnvil } from '@viem/anvil';
 import { join } from 'path';
 import fs from 'fs';
-import { ethers } from 'ethers_v6';
+import { MaxUint256, ethers, zeroPadBytes } from 'ethers_v6';
 import { exec } from 'child_process';
 import {
   Order,
@@ -350,6 +350,7 @@ export const getTokenBalance = async (
 const SETTLEMENT_CONTRACT = '0x9008D19f58AAbD9eD0D60971565AA8510560ab41';
 const SOLVER = '0x4339889FD9dFCa20a423fbA011e9dfF1C856CAEb';
 const ENS = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e';
+export const USDC_BALANCE_OF_SLOT = 0x09n;
 export const VAULT_RELAYER = '0xC92E8bdf79f0507f65a392b0ab4667716BFE0110';
 export const WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 export const USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
@@ -394,7 +395,8 @@ const getOrderFlags = (order: Order, signingScheme: SigningScheme) => {
 };
 
 // sleep for given milliseconds
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+export const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 // try and get signer, if not available, impersonate and then get signer
 const getSigner = async (provider: ethers.JsonRpcProvider, who: string) => {
@@ -418,4 +420,51 @@ const setOwnerForEns = (
   );
   const value = ethers.zeroPadValue(owner, 32);
   return provider.send('anvil_setStorageAt', [ENS, slot, value]);
+};
+
+export const balanceOfSlot = (mappingSlot: bigint, owner: string) => {
+  // balanceOf mapping at slot 3
+  return ethers.keccak256(
+    ABI_CODER.encode(['address', 'uint256'], [owner, mappingSlot])
+  );
+};
+
+export const estimateGasForExecuteHooks = async (
+  provider: ethers.JsonRpcProvider,
+  to: string,
+  calldata: string,
+  mockBalance: () => Promise<any>,
+  resetBalance: () => Promise<any>
+) => {
+  await mockBalance();
+  try {
+    return await provider.estimateGas({ to, data: calldata });
+  } catch (err) {
+    throw new Error("couldn't estimate gas");
+  } finally {
+    await resetBalance();
+  }
+};
+
+export const mockUsdcBalance = async (
+  provider: ethers.JsonRpcProvider,
+  user: string,
+  balance: bigint
+) => {
+  const mask = MaxUint256 >> 1n;
+  if (balance > mask)
+    throw new Error(
+      'cannot set balance > 255 bits, first bit is a blacklist flag, setting it to 1 will consider the contract blacklisted'
+    );
+  const balanceToSet = balance & mask;
+  const balanceString = (() => {
+    const hexString = balanceToSet.toString(16);
+    if (hexString.length % 2 !== 0) return '0x0' + hexString;
+    else return '0x' + hexString;
+  })();
+  return await provider.send('anvil_setStorageAt', [
+    USDC,
+    balanceOfSlot(USDC_BALANCE_OF_SLOT, user),
+    zeroPadBytes(balanceString, 32),
+  ]);
 };
