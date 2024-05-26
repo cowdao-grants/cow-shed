@@ -2,22 +2,32 @@ import { Order, OrderBalance, OrderKind } from '@cowprotocol/contracts';
 import {
   ABI_CODER,
   USDC,
-  USDC_BALANCE_OF_SLOT,
   VAULT_RELAYER,
+  WEIROLL_ADDRESS,
   WETH,
   approveToken,
   createOrder,
   estimateGasForExecuteHooks,
   fnCalldata,
+  fnSelector,
   getTokenBalance,
   mockUsdcBalance,
   settleOrder,
-  sleep,
   withAnvilProvider,
   wrapEther,
 } from './common';
 import { MaxUint256, ethers } from 'ethers_v6';
 import { CowShedSdk, ICall } from '../ts';
+import {
+  CallType,
+  END_OF_ARGS,
+  encodeCommand,
+  encodeFlag,
+  encodeInput,
+  encodeInputArg,
+  encodeWeirollExecuteCall,
+} from './weiroll';
+import { hexZeroPad } from 'ethers/lib/utils';
 
 // bridge contract address on ethereum mainnet
 const GNOSIS_CHAIN_BRIDGE = '0x88ad09518695c6c3712AC10a214bE5109a655671';
@@ -71,6 +81,47 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
     buyTokenBalance: OrderBalance.ERC20,
   };
 
+  // weiroll required since swap output amount is not known
+  // at tx time. need to fetch it at execution time.
+  const weirollCommands = [
+    // balanceOf staticcall
+    encodeCommand(
+      fnSelector('balanceOf(address)'),
+      encodeFlag(false, false, CallType.StaticCall),
+      encodeInput(
+        encodeInputArg(true, 0),
+        END_OF_ARGS,
+        END_OF_ARGS,
+        END_OF_ARGS,
+        END_OF_ARGS,
+        END_OF_ARGS
+      ),
+      encodeInputArg(true, 1),
+      USDC
+    ),
+    // bridge relay tokens call
+    encodeCommand(
+      fnSelector('relayTokens(address,address,uint256)'),
+      encodeFlag(false, false, CallType.Call),
+      encodeInput(
+        encodeInputArg(true, 2), // token
+        encodeInputArg(true, 0), // user address
+        encodeInputArg(true, 1), // balance
+        END_OF_ARGS,
+        END_OF_ARGS,
+        END_OF_ARGS
+      ),
+      END_OF_ARGS,
+      GNOSIS_CHAIN_BRIDGE
+    ),
+  ];
+
+  const state = [
+    hexZeroPad(proxyAddress, 32), // address to query the balance of
+    '0x', // this is where balance output will be written
+    hexZeroPad(USDC, 32), // USDC token address
+  ];
+
   // post hooks
   const calls: ICall[] = [
     // approve the bridge to spend the swapped usdc
@@ -80,25 +131,19 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
         'approve(address,uint256)',
         ABI_CODER.encode(
           ['address', 'uint256'],
-          [GNOSIS_CHAIN_BRIDGE, buyAmount]
+          [GNOSIS_CHAIN_BRIDGE, MaxUint256]
         )
       ),
       value: 0n,
       isDelegateCall: false,
       allowFailure: false,
     },
-    // bridge the usdc
+    // bridge the full output by using weiroll
     {
-      target: GNOSIS_CHAIN_BRIDGE,
-      callData: fnCalldata(
-        'relayTokens(address,address,uint256)',
-        ABI_CODER.encode(
-          ['address', 'address', 'uint'],
-          [USDC, userAddr, buyAmount]
-        )
-      ),
+      target: WEIROLL_ADDRESS,
+      callData: encodeWeirollExecuteCall(weirollCommands, state),
       value: 0n,
-      isDelegateCall: false,
+      isDelegateCall: true,
       allowFailure: false,
     },
   ];
@@ -129,7 +174,7 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
   );
 
   const prevBalance = await getTokenBalance(provider, USDC, proxyAddress);
-  const newBalance = MaxUint256 >> 1n;
+  const newBalance = buyAmount * 2n;
   const setProxyBalance = async () =>
     mockUsdcBalance(provider, proxyAddress, newBalance);
   const resetProxyBalance = async () =>
@@ -186,12 +231,18 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
     `${ethers.getAddress(userAddr)}.cowhooks.eth`
   );
   const proxyName = await provider.lookupAddress(proxyAddress);
+  const proxyUsdcBalanceAfterBridge = await getTokenBalance(
+    provider,
+    USDC,
+    proxyAddress
+  );
   console.log({
     resolvedAddressLowerCase,
     resolvedAddressChecksummed,
     proxyName,
     proxyAddress,
     userAddr,
+    proxyUsdcBalanceAfterBridge,
   });
 };
 
