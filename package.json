@@ -3,10 +3,14 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@cowprotocol/app-data": "^2.1.0",
+    "@cowprotocol/contracts": "^1.6.0",
+    "ethers": "v5",
     "ethers_v6": "npm:ethers@^6.12.1",
     "typescript": "^5.4.5"
   },
   "devDependencies": {
+    "@viem/anvil": "^0.0.10",
     "ts-node": "^10.9.2"
   }
 }

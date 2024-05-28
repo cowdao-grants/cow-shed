@@ -17,7 +17,7 @@ abstract contract COWShedResolver is INameResolver, IAddrResolver {
     /// @dev the namehash of the base name. computing at runtime is unnecessary code, so supply
     ///      precomputed. The script should use the `vm.ensNamehash` cheatcode to compute it and
     ///      provide the namehash.
-    bytes32 immutable baseNode;
+    bytes32 public immutable baseNode;
 
     constructor(bytes32 bName, bytes32 bNode) {
         baseNameSmallString = bName;
