@@ -429,7 +429,6 @@ const setOwnerForEns = (
 };
 
 export const balanceOfSlot = (mappingSlot: bigint, owner: string) => {
-  // balanceOf mapping at slot 3
   return ethers.keccak256(
     ABI_CODER.encode(['address', 'uint256'], [owner, mappingSlot])
   );
