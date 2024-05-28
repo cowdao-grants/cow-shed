@@ -87,31 +87,46 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
     // balanceOf staticcall
     encodeCommand(
       fnSelector('balanceOf(address)'),
+      // it should be a static call
       encodeFlag(false, false, CallType.StaticCall),
       encodeInput(
+        // balanceOf takes one arg, the address whose balance is being queried
+        // it is fixed length input, and stored at state index 0
         encodeInputArg(true, 0),
+        // all remainder args are unused
         END_OF_ARGS,
         END_OF_ARGS,
         END_OF_ARGS,
         END_OF_ARGS,
         END_OF_ARGS
       ),
+      // this tells the VM that the output of balanceOf is also
+      // of fixed length and that it should store it in state index 1
       encodeInputArg(true, 1),
+      // target address, this is whats called
       USDC
     ),
     // bridge relay tokens call
     encodeCommand(
       fnSelector('relayTokens(address,address,uint256)'),
+      // it is a Call
       encodeFlag(false, false, CallType.Call),
       encodeInput(
-        encodeInputArg(true, 2), // token
+        // token address, fixed length input, read from state index 2
+        encodeInputArg(true, 2),
+        // user address, fixed length input, read from state index 0
         encodeInputArg(true, 0), // user address
+        // balance, fixed length input, read from state index 1, this is where
+        // previous command stored it
         encodeInputArg(true, 1), // balance
+        // other 3 input args are unused
         END_OF_ARGS,
         END_OF_ARGS,
         END_OF_ARGS
       ),
+      // this commands output is not used/important, hence ignored
       END_OF_ARGS,
+      // target address, this is whats called
       GNOSIS_CHAIN_BRIDGE
     ),
   ];
@@ -119,7 +134,7 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
   const state = [
     hexZeroPad(proxyAddress, 32), // address to query the balance of
     '0x', // this is where balance output will be written
-    hexZeroPad(USDC, 32), // USDC token address
+    hexZeroPad(USDC, 32), // USDC token address, used in relayTokens call argument
   ];
 
   // post hooks
