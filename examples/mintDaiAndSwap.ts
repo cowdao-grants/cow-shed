@@ -12,7 +12,6 @@ import {
   approveToken,
   createOrder,
   fnCalldata,
-  frobFnSignature,
   getIlk,
   joinEth,
   resolveName,
@@ -86,7 +85,7 @@ const mintDaiAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
       value: 0n,
       allowFailure: false,
       callData: fnCalldata(
-        frobFnSignature,
+        'frob(bytes32,address,address,address,int256,int256)',
         ABI_CODER.encode(
           ['bytes32', 'address', 'address', 'address', 'int256', 'int256'],
           [ilk, user.address, user.address, proxyAddress, collateral, daiDebt]

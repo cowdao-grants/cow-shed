@@ -531,39 +531,17 @@ export const joinEth = async (
   amount: bigint
 ) => {
   const signer = await getSigner(provider, user);
-  return makeTransaction(signer, {
-    to: ETH_A_JOIN,
-    data: fnCalldata(
-      'join(address,uint256)',
-      ABI_CODER.encode(['address', 'uint'], [user, amount])
-    ),
-  }, 'mcd_eth_a.join');
-};
-
-export const frobFnSignature =
-  'frob(bytes32,address,address,address,int256,int256)';
-
-export const frob = async (
-  provider: ethers.JsonRpcProvider,
-  executor: string,
-  user: string,
-  collateralSrc: string,
-  debtDst: string,
-  ilk: string,
-  dink: bigint,
-  dart: bigint
-) => {
-  const signer = await getSigner(provider, executor);
-  return makeTransaction(signer, {
-    to: VAT,
-    data: fnCalldata(
-      frobFnSignature,
-      ABI_CODER.encode(
-        ['bytes32', 'address', 'address', 'address', 'int256', 'int256'],
-        [ilk, user, collateralSrc, debtDst, dink, dart]
-      )
-    ),
-  });
+  return makeTransaction(
+    signer,
+    {
+      to: ETH_A_JOIN,
+      data: fnCalldata(
+        'join(address,uint256)',
+        ABI_CODER.encode(['address', 'uint'], [user, amount])
+      ),
+    },
+    'mcd_eth_a.join'
+  );
 };
 
 export const resolveName = (provider: ethers.JsonRpcProvider, name: string) => {
