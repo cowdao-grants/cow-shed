@@ -8,3 +8,4 @@ libs = ["lib"]
 solc = "0.8.25"
 
 fs_permissions = [{ access = "write", path = "deploymentAddresses.json"}]
+via_ir = true
