@@ -5,7 +5,6 @@ import { ICOWAuthHook, Call } from "./ICOWAuthHook.sol";
 import { LibAuthenticatedHooks } from "./LibAuthenticatedHooks.sol";
 import { COWShedStorage, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
 import { REVERSE_REGISTRAR } from "./ens.sol";
-import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
