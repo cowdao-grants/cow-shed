@@ -57,7 +57,7 @@ library LibAuthenticatedHooks {
     {
         bytes32 messageHash = executeHooksMessageHash(calls, nonce, deadline);
 
-        assembly ("memory-safe") {
+        assembly {
             let freeMemoryPointer := mload(0x40)
 
             mstore(0x00, 0x1901)
@@ -80,7 +80,7 @@ library LibAuthenticatedHooks {
         bytes32 callshash = callsHash(calls);
         bytes32 executeHooksTypeHash = EXECUTE_HOOKS_TYPE_HASH;
 
-        assembly ("memory-safe") {
+        assembly {
             let before := mload(0x40)
             mstore(0x00, executeHooksTypeHash)
             mstore(0x20, callshash)
@@ -121,7 +121,7 @@ library LibAuthenticatedHooks {
         bool isDelegateCall = cll.isDelegateCall;
         bytes32 callTypeHash = CALL_TYPE_HASH;
 
-        assembly ("memory-safe") {
+        assembly {
             let freeMemoryPointer := mload(0x40)
             let firstSlot := mload(0x80)
             let secondSlot := mload(0xa0)
@@ -158,7 +158,7 @@ library LibAuthenticatedHooks {
             }
             if (!success && !call.allowFailure) {
                 // bubble up the revert message
-                assembly {
+                assembly ("memory-safe") {
                     revert(add(ret, 0x20), mload(ret))
                 }
             }
@@ -175,7 +175,7 @@ library LibAuthenticatedHooks {
             revert InvalidSignature();
         }
         uint256 mask = 0xff;
-        assembly {
+        assembly ("memory-safe") {
             r := calldataload(signature.offset)
             s := calldataload(add(signature.offset, 0x20))
             v := and(calldataload(add(signature.offset, 0x21)), mask)
