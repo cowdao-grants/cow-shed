@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { COWShed, Call } from "src/COWShed.sol";
+import { COWShedStorage, COWShed, Call } from "src/COWShed.sol";
 import { Test, Vm } from "forge-std/Test.sol";
 import { COWShedFactory, COWShedProxy } from "src/COWShedFactory.sol";
 import { BaseTest } from "./BaseTest.sol";
@@ -121,7 +121,7 @@ contract COWShedTest is BaseTest {
         userProxy.revokeNonce(nonce);
         assertTrue(userProxy.nonces(nonce), "nonce is not used yet");
 
-        vm.expectRevert(COWShed.NonceAlreadyUsed.selector);
+        vm.expectRevert(COWShedStorage.NonceAlreadyUsed.selector);
         userProxy.executeHooks(calls, nonce, _deadline(), signature);
     }
 

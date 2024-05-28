@@ -8,7 +8,6 @@ import { REVERSE_REGISTRAR } from "./ens.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
-    error NonceAlreadyUsed();
     error OnlyTrustedExecutor();
     error OnlySelf();
     error AlreadyInitialized();
@@ -86,14 +85,14 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     /// @notice Revoke a given nonce. Only the proxy owner/admin can do this.
     function revokeNonce(bytes32 nonce) external onlyAdmin {
-        _consumeNonce(nonce);
+        _useNonce(nonce);
     }
 
     receive() external payable { }
 
     /// @notice returns if a nonce is already used.
     function nonces(bytes32 nonce) external view returns (bool) {
-        return _state().nonces[nonce];
+        return _isNonceUsed(nonce);
     }
 
     /// @notice EIP712 domain separator for the user proxy.
@@ -110,15 +109,8 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         return _state().trustedExecutor;
     }
 
-    function _consumeNonce(bytes32 _nonce) internal {
-        if (_state().nonces[_nonce]) {
-            revert NonceAlreadyUsed();
-        }
-        _state().nonces[_nonce] = true;
-    }
-
     function _executeCalls(Call[] calldata calls, bytes32 nonce) internal {
-        _consumeNonce(nonce);
+        _useNonce(nonce);
         LibAuthenticatedHooks.executeCalls(calls);
     }
 }
