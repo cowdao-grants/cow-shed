@@ -57,7 +57,7 @@ library LibAuthenticatedHooks {
     {
         bytes32 messageHash = executeHooksMessageHash(calls, nonce, deadline);
 
-        assembly ("memory-safe") {
+        assembly {
             let freeMemoryPointer := mload(0x40)
 
             mstore(0x00, 0x1901)
@@ -80,7 +80,7 @@ library LibAuthenticatedHooks {
         bytes32 callshash = callsHash(calls);
         bytes32 executeHooksTypeHash = EXECUTE_HOOKS_TYPE_HASH;
 
-        assembly ("memory-safe") {
+        assembly {
             let before := mload(0x40)
             mstore(0x00, executeHooksTypeHash)
             mstore(0x20, callshash)
@@ -107,7 +107,7 @@ library LibAuthenticatedHooks {
             }
         }
 
-        assembly ("memory-safe") {
+        assembly {
             _callsHash := keccak256(add(hashes, 0x20), mul(nCalls, 0x20))
         }
     }
@@ -121,7 +121,7 @@ library LibAuthenticatedHooks {
         bool isDelegateCall = cll.isDelegateCall;
         bytes32 callTypeHash = CALL_TYPE_HASH;
 
-        assembly ("memory-safe") {
+        assembly {
             let freeMemoryPointer := mload(0x40)
             let firstSlot := mload(0x80)
             let secondSlot := mload(0xa0)
