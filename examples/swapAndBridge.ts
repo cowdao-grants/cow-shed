@@ -205,6 +205,7 @@ const swapAndBridge: Parameters<typeof withAnvilProvider>[0] = async (
   // check if the tokens got bridge
   const bridgeInitiatedLog = settleTx!.logs.find(
     (log) =>
+      // TokensBridgingInitiated(address,address,uint256,bytes32)
       log.topics[0] ===
       '0x59a9a8027b9c87b961e254899821c9a276b5efc35d1f7409ea4f291470f1629a' &&
       log.address.toLowerCase() === GNOSIS_CHAIN_BRIDGE.toLowerCase()
