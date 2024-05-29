@@ -23,6 +23,9 @@ Call(address target,uint256 value,bytes callData,bool allowFailure,bool isDelega
 
 The EOA signatures are expected to be 65 bytes long and to be encoded as `abi.encodePacked(r, s, v)`.
 
+Nonces are used to ensure signed hooks are only executed once and they also allow users to revoke
+the signed hooks in case they want to. And users must manage them.
+
 The nonces are not constrained to be sequential, so multiple orders with hooks can be executed
 out of order, but still validated. **However, nonces are implemented using a bitmap. And sequential
 nonces will save some gas.**
