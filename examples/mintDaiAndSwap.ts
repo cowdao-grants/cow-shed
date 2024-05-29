@@ -62,7 +62,7 @@ const mintDaiAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
   const order: Order = {
     sellToken: DAI,
     buyToken: COW,
-    receiver: proxyAddress,
+    receiver: user.address,
     sellAmount: daiDebt,
     buyAmount,
     validTo,
@@ -173,7 +173,7 @@ const mintDaiAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
 };
 
 const main = async () => {
-  await withAnvilProvider(mintDaiAndSwap, 6000_0000);
+  await withAnvilProvider(mintDaiAndSwap, 60_000_000);
 };
 
 main();

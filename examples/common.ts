@@ -506,19 +506,16 @@ const makeTransaction = async (
 // allow `toHope` to control `user`'s position
 export const vatHope = async (
   provider: ethers.JsonRpcProvider,
-  user: string,
-  toHope: string
+  who: string,
+  usr: string
 ) => {
-  console.log(`user ${user} hopes ${toHope}..`);
-  const signer = await getSigner(provider, user);
+  console.log(`user ${who} hopes ${usr}..`);
+  const signer = await getSigner(provider, who);
   return makeTransaction(
     signer,
     {
       to: VAT,
-      data: fnCalldata(
-        'hope(address)',
-        ABI_CODER.encode(['address'], [toHope])
-      ),
+      data: fnCalldata('hope(address)', ABI_CODER.encode(['address'], [usr])),
     },
     'vat.hope'
   );
@@ -527,17 +524,17 @@ export const vatHope = async (
 // deposit collateral
 export const joinEth = async (
   provider: ethers.JsonRpcProvider,
-  user: string,
-  amount: bigint
+  usr: string,
+  wad: bigint
 ) => {
-  const signer = await getSigner(provider, user);
+  const signer = await getSigner(provider, usr);
   return makeTransaction(
     signer,
     {
       to: ETH_A_JOIN,
       data: fnCalldata(
         'join(address,uint256)',
-        ABI_CODER.encode(['address', 'uint'], [user, amount])
+        ABI_CODER.encode(['address', 'uint'], [usr, wad])
       ),
     },
     'mcd_eth_a.join'
