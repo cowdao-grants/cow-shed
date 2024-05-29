@@ -17,12 +17,15 @@ actions in the hooks like:
 
 The signed message type looks like:
 ```
-ExecuteHooks(Call[] calls,bytes32 nonce)
-Call(address target,uint256 value,bytes callData,bool allowFailure)
+ExecuteHooks(Call[] calls,bytes32 nonce,uint256 deadline)
+Call(address target,uint256 value,bytes callData,bool allowFailure,bool isDelegateCall)
 ```
 
+The EOA signatures are expected to be 65 bytes long and to be encoded as `abi.encodePacked(r, s, v)`.
+
 The nonces are not constrained to be sequential, so multiple orders with hooks can be executed
-out of order, but still validated.
+out of order, but still validated. **However, nonces are implemented using a bitmap. And sequential
+nonces will save some gas.**
 
 The system also support smart contracts. In case of contracts, EIP1271 signatures are used to
 authenticate the signed hooks.
@@ -55,4 +58,14 @@ Fork testing is only used for the forward/reverse resolution testing of the ENS 
 
 ```bash
 forge test -vvv --fork-url https://eth.llamarpc.com
+```
+### Examples
+
+Two examples are included for reference:
+1. [`./examples/mintDaiAndSwap.ts`](./examples/mintDaiAndSwap.ts) - In this example, the user approves the proxy contract to take actions on its behalf on the maker protocol and uses prehooks to just-in-time(JIT) borrow DAI right before the DAI gets swapped to COW.
+1. [`./examples/swapAndBridge.ts`](./examples/swapAndBridge.ts) - In this example, the user uses the proxy address as the receiver for the swapped tokens and in the posthook it bridges the exact amount of swap output([weiroll](https://github.com/weiroll/weiroll) is used for this) to gnosis chain with user's address as the recipient.
+
+The examples can be ran as follows:
+```bash
+yarn ts-node examples/<example.ts>
 ```
