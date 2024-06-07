@@ -85,34 +85,74 @@ contract COWShedFactoryTest is BaseTest {
     }
 
     function testForwardResolve() external view {
+        _assertForwardResolve(user.addr, userProxyAddr);
+    }
+
+    function testReverseResolve() external view {
+        _assertReverseResolve(user.addr, userProxyAddr);
+    }
+
+    function testInitializeProxyWithEns() external {
+        address userAddr = makeAddr("user1");
+        address proxyAddr = factory.proxyOf(userAddr);
+        assertEq(proxyAddr.code.length, 0, "proxy is already initialized");
+        factory.initializeProxy(userAddr, true);
+        _assertForwardResolve(userAddr, proxyAddr);
+        _assertReverseResolve(userAddr, proxyAddr);
+        assertGt(proxyAddr.code.length, 0, "proxy is still not initialized");
+    }
+
+    function testInitializeProxyWithoutEns() external {
+        address userAddr = makeAddr("user1");
+        address proxyAddr = factory.proxyOf(userAddr);
+        assertEq(proxyAddr.code.length, 0, "proxy is already initialized");
+        factory.initializeProxy(userAddr, false);
+        try this.resolveAddr(userAddr) {
+            revert("resolution didnt fail");
+        } catch (bytes memory) { }
+        assertGt(proxyAddr.code.length, 0, "proxy is still not initialized");
+    }
+
+    function resolveAddr(address userAddr) external view returns (address) {
+        return _resolveAddr(
+            vm.ensNamehash(
+                string(abi.encodePacked(LibString.toHexString(userAddr), ".", LibString.fromSmallString(baseName)))
+            )
+        );
+    }
+
+    function _assertForwardResolve(address userAddr, address expectedResolution) internal view {
         assertEq(
             _resolveAddr(
                 vm.ensNamehash(
-                    string(abi.encodePacked(LibString.toHexString(user.addr), ".", LibString.fromSmallString(baseName)))
+                    string(abi.encodePacked(LibString.toHexString(userAddr), ".", LibString.fromSmallString(baseName)))
                 )
             ),
-            userProxyAddr
+            expectedResolution,
+            "forward resolution for lower case address failed"
         );
         assertEq(
             _resolveAddr(
                 vm.ensNamehash(
                     string(
                         abi.encodePacked(
-                            LibString.toHexStringChecksummed(user.addr), ".", LibString.fromSmallString(baseName)
+                            LibString.toHexStringChecksummed(userAddr), ".", LibString.fromSmallString(baseName)
                         )
                     )
                 )
             ),
-            userProxyAddr
+            expectedResolution,
+            "forward resolution for checksummed address failed"
         );
     }
 
-    function testReverseResolve() external view {
+    function _assertReverseResolve(address userAddr, address proxyAddr) internal view {
         assertEq(
-            _reverseResolve(userProxyAddr),
+            _reverseResolve(proxyAddr),
             string(
-                abi.encodePacked(LibString.toHexStringChecksummed(user.addr), ".", LibString.fromSmallString(baseName))
-            )
+                abi.encodePacked(LibString.toHexStringChecksummed(userAddr), ".", LibString.fromSmallString(baseName))
+            ),
+            "reverse resolution failed"
         );
     }
 }
