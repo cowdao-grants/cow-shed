@@ -50,15 +50,22 @@ contract COWShedProxy is COWShedStorage, Proxy {
 
     /// @dev revert until the initialization has been completed.
     fallback() external payable override {
-        if (!_state().initialized && msg.sig != COWShed.initialize.selector) revert InvalidInitialization();
+        _checkInitialization();
         _fallback();
     }
 
-    receive() external payable { }
+    receive() external payable {
+        _checkInitialization();
+        _fallback();
+    }
 
     function _implementation() internal view override returns (address implementation) {
         assembly {
             implementation := sload(IMPLEMENTATION_STORAGE_SLOT)
         }
+    }
+
+    function _checkInitialization() internal view {
+        if (!_state().initialized && msg.sig != COWShed.initialize.selector) revert InvalidInitialization();
     }
 }
