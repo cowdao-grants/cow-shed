@@ -43,6 +43,10 @@ abstract contract COWShedResolver is INameResolver, IAddrResolver {
         return LibString.fromSmallString(baseNameSmallString);
     }
 
+    function supportsInterface(bytes4 interfaceId) external view returns (bool) {
+        return interfaceId == IAddrResolver.addr.selector || interfaceId == INameResolver.name.selector;
+    }
+
     function _setReverseNode(address user, address proxy) internal {
         bytes32 node = keccak256(abi.encodePacked(ADDR_REVERSE_NODE, sha3HexAddress(proxy)));
         reverseResolutionNodeToAddress[node] = user;
