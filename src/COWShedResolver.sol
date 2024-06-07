@@ -43,7 +43,7 @@ abstract contract COWShedResolver is INameResolver, IAddrResolver {
         return LibString.fromSmallString(baseNameSmallString);
     }
 
-    function supportsInterface(bytes4 interfaceId) external view returns (bool) {
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
         return interfaceId == IAddrResolver.addr.selector || interfaceId == INameResolver.name.selector;
     }
 
