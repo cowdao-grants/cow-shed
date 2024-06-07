@@ -53,15 +53,21 @@ abstract contract COWShedResolver is INameResolver, IAddrResolver {
     }
 
     /// @dev support resolving both checksummed and lower case addresses
-    function _setForwardNode(address user, address proxy) internal {
-        _setForwardNodeForAddressString(LibString.toHexStringChecksummed(user), proxy);
-        _setForwardNodeForAddressString(LibString.toHexString(user), proxy);
+    function _setForwardNode(address user, address proxy) internal returns (bool) {
+        bool success1 = _trySetForwardNodeForAddressString(LibString.toHexStringChecksummed(user), proxy);
+        bool success2 = _trySetForwardNodeForAddressString(LibString.toHexString(user), proxy);
+        return success1 && success2;
     }
 
-    function _setForwardNodeForAddressString(string memory labelString, address proxy) internal {
+    function _trySetForwardNodeForAddressString(string memory labelString, address proxy)
+        internal
+        returns (bool success)
+    {
         bytes32 label = keccak256(abi.encodePacked(bytes(labelString)));
-        ENS.setSubnodeRecord(baseNode, label, address(this), address(this), type(uint64).max);
         bytes32 subnode = keccak256(abi.encodePacked(baseNode, label));
-        forwardResolutionNodeToAddress[subnode] = proxy;
+        try ENS.setSubnodeRecord(baseNode, label, address(this), address(this), type(uint64).max) {
+            success = true;
+            forwardResolutionNodeToAddress[subnode] = proxy;
+        } catch (bytes memory) { }
     }
 }

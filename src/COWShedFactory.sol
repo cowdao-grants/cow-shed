@@ -33,21 +33,15 @@ contract COWShedFactory is COWShedResolver {
         bytes calldata signature
     ) external {
         address proxy = proxyOf(user);
-        // deploy and initialize proxy if it doesnt exist
-        if (proxy.code.length == 0) {
-            COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }(implementation, user);
-            COWShed(payable(proxy)).initialize(address(this));
-            emit COWShedBuilt(user, address(newProxy));
+        // initialize the proxy
+        bool newlyDeployed = _initializeProxy(user, proxy);
 
-            // set reverse mapping of proxy to owner
-            ownerOf[proxy] = user;
-
-            // if on mainnet, set the forward and reverse resolution nodes
-            if (block.chainid == 1) {
-                _setReverseNode(user, proxy);
-                _setForwardNode(user, proxy);
-            }
+        // set ens records if it is a newly deployed proxy
+        if (newlyDeployed) {
+            // initialize the ens state, dont care if it fails, hence, ignoring the return value
+            _initializeEns(user, proxy);
         }
+
         // execute the hooks, the authorization checks are implemented in the
         // COWShed.executeHooks function
         COWShed(payable(proxy)).executeHooks(calls, nonce, deadline, signature);
@@ -68,5 +62,26 @@ contract COWShedFactory is COWShedResolver {
                 )
             )
         );
+    }
+
+    function _initializeProxy(address user, address proxy) internal returns (bool newlyDeployed) {
+        // deploy and initialize proxy if it doesnt exist
+        if (proxy.code.length == 0) {
+            COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }(implementation, user);
+            COWShed(payable(proxy)).initialize(address(this));
+            emit COWShedBuilt(user, address(newProxy));
+
+            // set reverse mapping of proxy to owner
+            ownerOf[proxy] = user;
+            newlyDeployed = true;
+        }
+    }
+
+    function _initializeEns(address user, address proxy) internal returns (bool success) {
+        // if on mainnet, set the forward and reverse resolution nodes
+        if (block.chainid == 1) {
+            _setReverseNode(user, proxy);
+            success = _setForwardNode(user, proxy);
+        }
     }
 }
