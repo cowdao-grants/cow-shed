@@ -12,6 +12,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     error OnlySelf();
     error AlreadyInitialized();
     error OnlyAdmin();
+    error OnlyAdminOrTrustedExecutorOrSelf();
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
@@ -33,7 +34,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _;
     }
 
-    function initialize(address factory) external {
+    function initialize(address factory, bool claimResolver) external {
         if (_state().initialized) {
             revert AlreadyInitialized();
         }
@@ -41,7 +42,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _state().trustedExecutor = factory;
         emit TrustedExecutorChanged(address(0), factory);
 
-        if (block.chainid == 1) {
+        if (block.chainid == 1 && claimResolver) {
             // transfer ownership of reverse ENS record to the factory contract
             // and also set it as the resolver
             REVERSE_REGISTRAR.claimWithResolver(factory, factory);
@@ -63,6 +64,17 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @inheritdoc ICOWAuthHook
     function trustedExecuteHooks(Call[] calldata calls) external onlyTrustedExecutor {
         LibAuthenticatedHooks.executeCalls(calls);
+    }
+
+    /// @notice set resolver for reverse resolution. mostly a utility function for users who opted out of
+    ///         ens at initialization, but want to initialize it after.
+    function claimWithResolver(address resolver) external {
+        if (msg.sender != _admin() && msg.sender != _state().trustedExecutor && msg.sender != address(this)) {
+            revert OnlyAdminOrTrustedExecutorOrSelf();
+        }
+        // transfer ownership of reverse ENS record to the factory contract
+        // and also set it as the resolver
+        REVERSE_REGISTRAR.claimWithResolver(resolver, resolver);
     }
 
     /// @inheritdoc ICOWAuthHook

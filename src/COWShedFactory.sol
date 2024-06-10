@@ -9,6 +9,7 @@ import { COWShedResolver } from "./COWShedResolver.sol";
 contract COWShedFactory is COWShedResolver {
     error InvalidSignature();
     error NonceAlreadyUsed();
+    error SettingEnsRecordsFailed();
 
     event COWShedBuilt(address user, address shed);
 
@@ -20,6 +21,31 @@ contract COWShedFactory is COWShedResolver {
 
     constructor(address impl, bytes32 bName, bytes32 bNode) COWShedResolver(bName, bNode) {
         implementation = impl;
+    }
+
+    /// @notice deploy user proxy if not already deployed, optionally even setup the ens records.
+    ///         if any user wants to opt-out of ens to save on gas, they need to initialize the proxy
+    ///         prior to first hooks execution.
+    /// @param user    - User to deploy the proxy for.
+    /// @param withEns - whether to initialize the ens or not
+    function initializeProxy(address user, bool withEns) external {
+        address proxy = proxyOf(user);
+        _initializeProxy(user, proxy, withEns);
+        if (withEns) {
+            if (!_initializeEns(user, proxy)) {
+                revert SettingEnsRecordsFailed();
+            }
+        }
+    }
+
+    /// @notice initialize the ens records for given user proxy.
+    /// @param user - User to set ens records for.
+    function initializeEns(address user) external {
+        address proxy = proxyOf(user);
+        if (!_initializeEns(user, proxy)) {
+            revert SettingEnsRecordsFailed();
+        }
+        COWShed(payable(proxy)).claimWithResolver(address(this));
     }
 
     /// @notice execute hooks on user proxy
@@ -34,7 +60,7 @@ contract COWShedFactory is COWShedResolver {
     ) external {
         address proxy = proxyOf(user);
         // initialize the proxy
-        bool newlyDeployed = _initializeProxy(user, proxy);
+        bool newlyDeployed = _initializeProxy(user, proxy, true);
 
         // set ens records if it is a newly deployed proxy
         if (newlyDeployed) {
@@ -64,11 +90,11 @@ contract COWShedFactory is COWShedResolver {
         );
     }
 
-    function _initializeProxy(address user, address proxy) internal returns (bool newlyDeployed) {
+    function _initializeProxy(address user, address proxy, bool claimResolver) internal returns (bool newlyDeployed) {
         // deploy and initialize proxy if it doesnt exist
         if (proxy.code.length == 0) {
             COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }(implementation, user);
-            COWShed(payable(proxy)).initialize(address(this));
+            COWShed(payable(proxy)).initialize(address(this), claimResolver);
             emit COWShedBuilt(user, address(newProxy));
 
             // set reverse mapping of proxy to owner
