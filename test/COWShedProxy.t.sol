@@ -65,30 +65,30 @@ contract COWShedProxyTest is BaseTest {
     function testProxyClaimWithResolver() external {
         COWShed cowshed = new COWShed();
 
-        // should not be able to use proxy before initialization
         COWShedProxy proxy = new COWShedProxy(address(cowshed), user.addr);
         assertImpl(address(proxy), address(cowshed));
 
         COWShed(payable(address(proxy))).initialize(address(factory), false);
         _assertReverseResolver(address(proxy), address(0));
 
+        // owner can claim
         vm.prank(user.addr);
         COWShed(payable(address(proxy))).claimWithResolver(address(factory));
         _assertReverseResolver(address(proxy), address(factory));
 
-        address rand = makeAddr("rand");
+        address otherResolver = makeAddr("otherResolver");
         // factory is the trusted executor
         vm.prank(address(factory));
-        COWShed(payable(address(proxy))).claimWithResolver(address(rand));
-        _assertReverseResolver(address(proxy), address(rand));
+        COWShed(payable(address(proxy))).claimWithResolver(address(otherResolver));
+        _assertReverseResolver(address(proxy), address(otherResolver));
 
-        // factory is the trusted executor
+        // cat set resolver when called by the proxy(self-call)
         vm.prank(address(proxy));
         COWShed(payable(address(proxy))).claimWithResolver(address(factory));
         _assertReverseResolver(address(proxy), address(factory));
 
         // anyone else trying to set it will revert
-        vm.prank(rand);
+        vm.prank(makeAddr("otherUser"));
         vm.expectRevert(COWShed.OnlyAdminOrTrustedExecutorOrSelf.selector);
         COWShed(payable(address(proxy))).claimWithResolver(address(factory));
     }
