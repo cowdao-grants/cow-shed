@@ -7,8 +7,11 @@ import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
 import { COWShed } from "src/COWShed.sol";
 import { BaseTest } from "./BaseTest.sol";
 import { LibString } from "solady/utils/LibString.sol";
+import { ENS } from "src/ens.sol";
 
 contract COWShedFactoryTest is BaseTest {
+    error ErrorSettingEns();
+
     function testExecuteHooks() external {
         Vm.Wallet memory wallet = vm.createWallet("testWallet");
         address addr1 = makeAddr("addr1");
@@ -32,6 +35,34 @@ contract COWShedFactoryTest is BaseTest {
 
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
         factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
+    }
+
+    function testExecuteHooksForRevertingEns() external {
+        // revert setSubnodeRecord, but only for the factory's ens
+        vm.mockCallRevert(
+            address(ENS),
+            abi.encodePacked(ENS.setSubnodeRecord.selector, baseNode),
+            abi.encodePacked(ErrorSettingEns.selector)
+        );
+
+        Vm.Wallet memory wallet = vm.createWallet("testWallet");
+        address addr1 = makeAddr("addr1");
+        address addr2 = makeAddr("addr2");
+
+        Call[] memory calls = new Call[](2);
+        calls[0] =
+            Call({ target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false });
+        calls[1] = Call({ target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false });
+
+        address expectedProxyAddress = factory.proxyOf(wallet.addr);
+        assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
+
+        bytes32 nonce = "nonce";
+        bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
+        vm.expectCall(addr1, calls[0].callData);
+        vm.expectCall(addr2, calls[1].callData);
+        factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
+        assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
     }
 
     function testDomainSeparators() external {

@@ -5,8 +5,9 @@ import {
     INameResolver, IReverseRegistrar, IENS, IAddrResolver, ENS, ADDR_REVERSE_NODE, sha3HexAddress
 } from "./ens.sol";
 import { LibString } from "solady/utils/LibString.sol";
+import { IERC165 } from "forge-std/interfaces/IERC165.sol";
 
-abstract contract COWShedResolver is INameResolver, IAddrResolver {
+abstract contract COWShedResolver is INameResolver, IAddrResolver, IERC165 {
     /// @notice maps the `<proxy-address>.<base-name>` node to the user address
     mapping(bytes32 => address) public reverseResolutionNodeToAddress;
     /// @notice maps the subnode label hash(`<user>`) to the proxy address
@@ -43,21 +44,32 @@ abstract contract COWShedResolver is INameResolver, IAddrResolver {
         return LibString.fromSmallString(baseNameSmallString);
     }
 
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == type(IAddrResolver).interfaceId || interfaceId == type(INameResolver).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
+    }
+
     function _setReverseNode(address user, address proxy) internal {
         bytes32 node = keccak256(abi.encodePacked(ADDR_REVERSE_NODE, sha3HexAddress(proxy)));
         reverseResolutionNodeToAddress[node] = user;
     }
 
     /// @dev support resolving both checksummed and lower case addresses
-    function _setForwardNode(address user, address proxy) internal {
-        _setForwardNodeForAddressString(LibString.toHexStringChecksummed(user), proxy);
-        _setForwardNodeForAddressString(LibString.toHexString(user), proxy);
+    function _setForwardNode(address user, address proxy) internal returns (bool) {
+        bool success1 = _trySetForwardNodeForAddressString(LibString.toHexStringChecksummed(user), proxy);
+        bool success2 = _trySetForwardNodeForAddressString(LibString.toHexString(user), proxy);
+        return success1 && success2;
     }
 
-    function _setForwardNodeForAddressString(string memory labelString, address proxy) internal {
+    function _trySetForwardNodeForAddressString(string memory labelString, address proxy)
+        internal
+        returns (bool success)
+    {
         bytes32 label = keccak256(abi.encodePacked(bytes(labelString)));
-        ENS.setSubnodeRecord(baseNode, label, address(this), address(this), type(uint64).max);
         bytes32 subnode = keccak256(abi.encodePacked(baseNode, label));
-        forwardResolutionNodeToAddress[subnode] = proxy;
+        try ENS.setSubnodeRecord(baseNode, label, address(this), address(this), type(uint64).max) {
+            success = true;
+            forwardResolutionNodeToAddress[subnode] = proxy;
+        } catch (bytes memory) { }
     }
 }
