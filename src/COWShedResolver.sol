@@ -5,6 +5,7 @@ import {
     INameResolver, IReverseRegistrar, IENS, IAddrResolver, ENS, ADDR_REVERSE_NODE, sha3HexAddress
 } from "./ens.sol";
 import { LibString } from "solady/utils/LibString.sol";
+import { IERC165 } from "forge-std/interfaces/IERC165.sol";
 
 abstract contract COWShedResolver is INameResolver, IAddrResolver {
     /// @notice maps the `<proxy-address>.<base-name>` node to the user address
@@ -44,7 +45,8 @@ abstract contract COWShedResolver is INameResolver, IAddrResolver {
     }
 
     function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
-        return interfaceId == IAddrResolver.addr.selector || interfaceId == INameResolver.name.selector;
+        return interfaceId == type(IAddrResolver).interfaceId || interfaceId == type(INameResolver).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
     }
 
     function _setReverseNode(address user, address proxy) internal {
