@@ -7,7 +7,7 @@ import {
 import { LibString } from "solady/utils/LibString.sol";
 import { IERC165 } from "forge-std/interfaces/IERC165.sol";
 
-abstract contract COWShedResolver is INameResolver, IAddrResolver {
+abstract contract COWShedResolver is INameResolver, IAddrResolver, IERC165 {
     /// @notice maps the `<proxy-address>.<base-name>` node to the user address
     mapping(bytes32 => address) public reverseResolutionNodeToAddress;
     /// @notice maps the subnode label hash(`<user>`) to the proxy address
