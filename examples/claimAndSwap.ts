@@ -1,53 +1,98 @@
-import { Order, OrderBalance, OrderKind } from '@cowprotocol/contracts';
+import { Order, OrderBalance, OrderKind } from "@cowprotocol/contracts";
 import {
   ABI_CODER,
+  COW,
+  VAULT_RELAYER,
   WETH,
+  approveToken,
   createOrder,
   fnCalldata,
+  getSigner,
   getTokenBalance,
-  resolveName,
   settleOrder,
   withAnvilProvider,
-} from './common';
-import { ethers } from 'ethers_v6';
-import { CowShedSdk, ICall } from '../ts';
+  wrapEther,
+} from "./common";
+import { ethers, getAddress, parseEther } from "ethers_v6";
+import { CowShedSdk, ICall } from "../ts";
+import { hexDataSlice } from "ethers/lib/utils";
 
-const VESTING_ESCROW = '0xB802E2A5B79301d69BbCb4C43cA68fA54b22392B';
+const VESTING_ESCROW_FACTORY = "0xcf61782465ff973638143d6492b51a85986ab347"; // llama pay
 
-const WXDAI = '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d';
-const USDC = '0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83';
+export const createVest = async (
+  provider: ethers.JsonRpcProvider,
+  funder: string,
+  token: string,
+  receiver: string,
+  amount: bigint,
+  vesting_duration: bigint
+) => {
+  await approveToken(provider, token, funder, VESTING_ESCROW_FACTORY, amount);
+  console.log(`creating vesting contract`);
+  const signer = await getSigner(provider, funder);
+  const tx = await signer.sendTransaction({
+    to: VESTING_ESCROW_FACTORY,
+    data: fnCalldata(
+      "deploy_vesting_contract(address,address,uint256,uint256)",
+      ABI_CODER.encode(
+        ["address", "address", "uint256", "uint256"],
+        [token, receiver, amount, vesting_duration]
+      )
+    ),
+  });
+  const receipt = await tx.wait();
+  if (receipt?.status === 0)
+    throw new Error("Vesting contract creation failed");
+
+  const vestingContractAddr = getAddress(
+    hexDataSlice(receipt?.logs[0].topics[2] as string, 12)
+  );
+  console.log(`vesting contract created at ${vestingContractAddr}`);
+  return vestingContractAddr as string;
+};
 
 const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
   provider: ethers.JsonRpcProvider,
   signers: ethers.Wallet[],
   { factory, implementation, proxyInitCode }
 ) => {
+  const funder = signers[0];
   const user = signers[1];
+  const funderAddr = await funder.getAddress();
   const userAddr = await user.getAddress();
+  const amount = parseEther("1");
 
-  // wrap the ether and approve to cowswap
-  const amount = 1n;
+  await wrapEther(provider, funderAddr, amount);
+
+  const vestingContractAddr = await createVest(
+    provider,
+    funderAddr,
+    WETH,
+    userAddr,
+    amount,
+    500n
+  );
+
+  await provider.send("evm_increaseTime", [501]);
 
   // compute the proxy address with CowShedSdk
   const shedSdk = new CowShedSdk({
     factoryAddress: factory,
     implementationAddress: implementation,
-    chainId: 100,
+    chainId: 1,
     proxyCreationCode: proxyInitCode,
   });
-  const proxyAddress = shedSdk.computeProxyAddress(userAddr);
-  console.log('Computed proxy address for user', userAddr, 'is', proxyAddress);
 
   const validTo = Math.floor(new Date().getTime() / 1000) + 7200;
 
   const order: Order = {
-    sellToken: WXDAI,
-    buyToken: USDC,
-    receiver: proxyAddress,
+    sellToken: WETH,
+    buyToken: COW,
+    receiver: userAddr,
     sellAmount: amount,
-    buyAmount: 0,
+    buyAmount: parseEther("1000"),
     validTo,
-    appData: '',
+    appData: "",
     feeAmount: 0n,
     kind: OrderKind.SELL,
     partiallyFillable: true,
@@ -59,17 +104,17 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
   const calls: ICall[] = [
     // approve the bridge to spend the swapped usdc
     {
-      target: VESTING_ESCROW,
+      target: vestingContractAddr,
       callData: fnCalldata(
-        'claim()',
-        '0x'
+        "claim(address)",
+        ABI_CODER.encode(["address"], [userAddr])
       ),
       value: 0n,
       isDelegateCall: false,
       allowFailure: false,
     },
   ];
-  const nonce = ethers.encodeBytes32String('first');
+  const nonce = ethers.encodeBytes32String("first");
 
   // signing the hooks intent
   const hashToSign = shedSdk.hashToSignWithUser(
@@ -78,9 +123,9 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
     BigInt(validTo),
     userAddr
   );
-  console.log('hash to sign', hashToSign);
+  console.log("hash to sign", hashToSign);
   const signature = user.signingKey.sign(hashToSign);
-  console.log('actual signature', signature.r, signature.s, signature.v);
+  console.log("actual signature", signature.r, signature.s, signature.v);
   const encodedSignature = CowShedSdk.encodeEOASignature(
     BigInt(signature.r),
     BigInt(signature.s),
@@ -95,58 +140,45 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
     encodedSignature
   );
 
-
   const hooks = {
-    post: [{ target: factory, callData: hooksCalldata, gasLimit: '9999999999999999999999' }],
+    pre: [
+      {
+        target: factory,
+        callData: hooksCalldata,
+        gasLimit: "9999999999999999999999",
+      },
+    ],
   };
 
-  // create order
+  const approveTx = await approveToken(
+    provider,
+    WETH,
+    userAddr,
+    VAULT_RELAYER,
+    amount
+  );
+  console.log("Approved WETH to vault relayer", approveTx?.hash);
+
   const orderTx = await createOrder(provider, order, hooks, userAddr);
-  console.log('Create order tx', orderTx?.hash);
+  console.log("Create order tx", orderTx?.hash);
 
   // settle order
   const settleTx = await settleOrder(provider, order, hooks, userAddr);
-  console.log('Settle tx', settleTx?.hash);
-
+  console.log("Settle tx", settleTx?.hash);
   // check if the tokens got claimed
-  const claimedLog = settleTx!.logs.find(
-    (log) =>
-      // Claim(address,uint256)
-      log.topics[0] ===
-      '0x47cee97cb7acd717b3c0aa1435d004cd5b3c8c57d70dbceb4e4458bbd60e39d4' &&
-      log.address.toLowerCase() === VESTING_ESCROW.toLowerCase()
-  );
+
+  const claimedLog = settleTx!.logs.find((log) => {
+    return log.address.toLowerCase() === vestingContractAddr.toLowerCase();
+  });
   if (claimedLog === undefined) {
-    console.log('Bridge didnt happen!!!');
+    console.log("Claim didnt happen!!!");
     return;
   }
-
-  const amountClaimed = ABI_CODER.decode(['uint256'], claimedLog.data)[0];
-  const sender = ABI_CODER.decode(['address'], claimedLog.topics[2])[0];
-  console.log({ amountClaimed, sender, proxyAddress });
-
-  const resolvedAddressLowerCase = await resolveName(
-    provider,
-    `${userAddr.toLowerCase()}.cowhooks.eth`
-  );
-  const resolvedAddressChecksummed = await resolveName(
-    provider,
-    `${ethers.getAddress(userAddr)}.cowhooks.eth`
-  );
-  const proxyName = await provider.lookupAddress(proxyAddress);
-  const proxyUsdcBalanceAfterBridge = await getTokenBalance(
-    provider,
-    USDC,
-    proxyAddress
-  );
-  console.log({
-    resolvedAddressLowerCase,
-    resolvedAddressChecksummed,
-    proxyName,
-    proxyAddress,
-    userAddr,
-    proxyUsdcBalanceAfterBridge,
-  });
+  const amountClaimed = ABI_CODER.decode(["uint256"], claimedLog.data)[0];
+  const recipient = ABI_CODER.decode(["address"], claimedLog.topics[1])[0];
+  console.log(`${recipient} claimed ${amountClaimed} tokens`);
+  const receiverCOWBalance = await getTokenBalance(provider, COW, userAddr);
+  console.log("COW balance after swap", receiverCOWBalance.toString());
 };
 
 const main = async () => {
