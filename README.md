@@ -67,7 +67,7 @@ forge test -vvv --fork-url https://eth.llamarpc.com
 Two examples are included for reference:
 1. [`./examples/mintDaiAndSwap.ts`](./examples/mintDaiAndSwap.ts) - In this example, the user approves the proxy contract to take actions on its behalf on the maker protocol and uses prehooks to just-in-time(JIT) borrow DAI right before the DAI gets swapped to COW.
 2. [`./examples/swapAndBridge.ts`](./examples/swapAndBridge.ts) - In this example, the user uses the proxy address as the receiver for the swapped tokens and in the posthook it bridges the exact amount of swap output([weiroll](https://github.com/weiroll/weiroll) is used for this) to gnosis chain with user's address as the recipient.
-3. [`./examples/swapAndBridge.ts`](.examples/claimAndSwap) - In this example, the user claim a WETH from Llama Pay from a vesting contract using a prehook right before swap it to CoW.
+3. [`./examples/swapAndBridge.ts`](.examples/claimAndSwap) - In this example, the user claims WETH from a Llama Pay vesting contract using a prehook right before swapping it to COW.
 
 The examples can be ran as follows:
 ```bash
