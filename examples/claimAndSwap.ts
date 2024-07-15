@@ -144,7 +144,7 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
       {
         target: factory,
         callData: hooksCalldata,
-        gasLimit: "9999999999999999999999",
+        gasLimit: "1000000000",
       },
     ],
   };
