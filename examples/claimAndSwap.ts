@@ -84,7 +84,6 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
   });
 
   const validTo = Math.floor(new Date().getTime() / 1000) + 7200;
-
   const order: Order = {
     sellToken: WETH,
     buyToken: COW,
@@ -102,7 +101,7 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
 
   // pre-hooks
   const calls: ICall[] = [
-    // approve the bridge to spend the swapped usdc
+    // claim all tokens from vesting contract
     {
       target: vestingContractAddr,
       callData: fnCalldata(
@@ -126,6 +125,7 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
   console.log("hash to sign", hashToSign);
   const signature = user.signingKey.sign(hashToSign);
   console.log("actual signature", signature.r, signature.s, signature.v);
+
   const encodedSignature = CowShedSdk.encodeEOASignature(
     BigInt(signature.r),
     BigInt(signature.s),
@@ -139,7 +139,6 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
     userAddr,
     encodedSignature
   );
-
   const hooks = {
     pre: [
       {
@@ -150,6 +149,7 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
     ],
   };
 
+  // approve WETH to vault relayer
   const approveTx = await approveToken(
     provider,
     WETH,
@@ -159,14 +159,15 @@ const claimAndSwap: Parameters<typeof withAnvilProvider>[0] = async (
   );
   console.log("Approved WETH to vault relayer", approveTx?.hash);
 
+  // create order
   const orderTx = await createOrder(provider, order, hooks, userAddr);
   console.log("Create order tx", orderTx?.hash);
 
   // settle order
   const settleTx = await settleOrder(provider, order, hooks, userAddr);
   console.log("Settle tx", settleTx?.hash);
-  // check if the tokens got claimed
 
+  // check if all tokens were claimed
   const claimedLog = settleTx!.logs.find((log) => {
     return log.address.toLowerCase() === vestingContractAddr.toLowerCase();
   });
