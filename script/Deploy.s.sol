@@ -10,8 +10,8 @@ contract DeployScript is Script {
         bytes32 bNode = vm.ensNamehash(baseEns);
 
         vm.startBroadcast();
-        COWShed cowshed = new COWShed{salt: "v1.0.0"}();
-        COWShedFactory factory = new COWShedFactory{salt: "v1.0.0"}(address(cowshed), bName, bNode);
+        COWShed cowshed = new COWShed{salt: ""}();
+        COWShedFactory factory = new COWShedFactory{salt: ""}(address(cowshed), bName, bNode);
         bytes memory initCode = vm.getCode("src/COWShedProxy.sol:COWShedProxy");
 
         string memory addrJson = "deploymentAddresses.json";
