@@ -410,7 +410,7 @@ export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 // try and get signer, if not available, impersonate and then get signer
-const getSigner = async (provider: ethers.JsonRpcProvider, who: string) => {
+export const getSigner = async (provider: ethers.JsonRpcProvider, who: string) => {
   try {
     return await provider.getSigner(who);
   } catch (err) {
