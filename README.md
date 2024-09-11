@@ -55,6 +55,20 @@ $ cast lookup-address <proxy-address>
 
 ## Usage
 
+### Deployments
+
+As `cow-shed` makes use of determinstic deployment, it has the same deployment address across all EVM-compatible chains. The contracts are deployed to the following addresses:
+
+* `COWShedFactory`: `0x00E989b87700514118Fa55326CD1cCE82faebEF6`
+* `COWShed`: `0x2CFFA8cf11B90C9F437567b86352169dF4009F73` (implementation)
+
+The contracts are deployed to the following networks:
+
+* `mainnet`
+* `gnosis`
+* `arbitrum`
+* `sepolia`
+
 ### Tests
 
 Fork testing is only used for the forward/reverse resolution testing of the ENS names for the proxies.
