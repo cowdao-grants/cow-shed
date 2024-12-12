@@ -15,6 +15,10 @@
     "42161": {
       "address": "0x2cffa8cf11b90c9f437567b86352169df4009f73",
       "transactionHash": "0x85b22963aac6eac5a365c50f768bf9b27bb316cbcf5eb49dc67af9ad40f7a7b1"
+    },
+    "8453": {
+      "address": "0x2cffa8cf11b90c9f437567b86352169df4009f73",
+      "transactionHash": "0x9b7889e3fe9a5dacdbd4ada5b3d046bb262c404cb04abd3547f3fa0775f13a16"
     }
   },
   "COWShedFactory": {
@@ -33,6 +37,10 @@
     "42161": {
       "address": "0x00e989b87700514118fa55326cd1cce82faebef6",
       "transactionHash": "0x31a9f03c26a60231acd382468e3a2b2c6d3870cbdba4e5c0cc1ab9cf35210bf2"
+    },
+    "8453": {
+      "address": "0x00e989b87700514118fa55326cd1cce82faebef6",
+      "transactionHash": "0xe05f55111731d3c52c67f97a00dbacdc34bbf2a51a3bbeab1b28985429e4fccc"
     }
   }
 }
