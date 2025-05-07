@@ -128,3 +128,7 @@ export ETHERSCAN_API_KEY='your API key here' # required only for etherscan based
 forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x2cffa8cf11b90c9f437567b86352169df4009f73 COWShed --guess-constructor-args
 forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x00E989b87700514118Fa55326CD1cCE82faebEF6 COWShedFactory --guess-constructor-args
 ```
+
+#### 5. Commit the deployment file
+
+After sucsessfully deploying the contracts, a deployment file should be created in the `broadcast/Deploy.s.sol/` directory with a corresponding chain subdirectory. This needs to be commited to the repo.
