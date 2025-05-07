@@ -132,3 +132,12 @@ forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x00E989
 #### 5. Commit the deployment file
 
 After successfully deploying the contracts, a deployment file is automatically generated in the `broadcast/Deploy.s.sol/` directory under the relevant chain subdirectory. Make sure to commit this file to the repository.
+
+#### 6. Deployment addresses
+
+The file [`networks.json`](./networks.json) lists all official deployments of the contracts in this repository by chain id.
+
+Update the file with:
+```sh
+bash dev/generate-networks-file.sh > networks.json
+```
