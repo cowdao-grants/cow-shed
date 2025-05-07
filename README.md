@@ -120,6 +120,8 @@ forge script 'script/Deploy.s.sol:DeployScript' -vvvv --rpc-url "$RPC_URL" --pri
 #### 4. Verify the deployed contracts
 
 ```shell
+export ETHERSCAN_API_KEY='your API key here' # required only for etherscan based explorers
+
 forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x2cffa8cf11b90c9f437567b86352169df4009f73 COWShed --guess-constructor-args
 forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x00E989b87700514118Fa55326CD1cCE82faebEF6 COWShedFactory --guess-constructor-args
 ```
