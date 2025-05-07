@@ -105,7 +105,7 @@ foundryup -C cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5
 $ forge build
 ```
 
-#### 2. Validated the deterministic addresses
+#### 2. Validate the deterministic addresses
 
 ```shell
 forge script 'script/Deploy.s.sol:DeployScript' -vvvv --rpc-url "$RPC_URL" --private-key "$PK" "hooks.cow.eth" --sig "run(string)"
