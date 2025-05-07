@@ -68,6 +68,9 @@ The contracts are deployed to the following networks:
 * `gnosis`
 * `arbitrum`
 * `sepolia`
+* `base`
+* `polygon`
+* `avalanche`
 
 ### Tests
 
