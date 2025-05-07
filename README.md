@@ -131,4 +131,4 @@ forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x00E989
 
 #### 5. Commit the deployment file
 
-After sucsessfully deploying the contracts, a deployment file should be created in the `broadcast/Deploy.s.sol/` directory with a corresponding chain subdirectory. This needs to be commited to the repo.
+After successfully deploying the contracts, a deployment file should be created in the `broadcast/Deploy.s.sol/` directory with a corresponding chain subdirectory. This needs to be commited to the repo.
