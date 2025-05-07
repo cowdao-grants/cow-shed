@@ -87,3 +87,39 @@ The examples can be ran as follows:
 ```bash
 yarn ts-node examples/<example.ts>
 ```
+
+### Deployment
+
+#### 0. Pre-requisites
+
+Even though the deterministic deployment is used, on the latest foundry versions, different addresses are generated.
+It is required to use the following foundry toolchain version:
+
+```shell
+foundryup -C cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5
+```
+
+#### 1. Build 
+
+```shell
+$ forge build
+```
+
+#### 2. Validated the deterministic addresses
+
+```shell
+forge script 'script/Deploy.s.sol:DeployScript' -vvvv --rpc-url "$RPC_URL" --private-key "$PK" "hooks.cow.eth" --sig "run(string)"
+```
+
+#### 3. Deploy
+
+```shell
+forge script 'script/Deploy.s.sol:DeployScript' -vvvv --rpc-url "$RPC_URL" --private-key "$PK" "hooks.cow.eth" --sig "run(string)" --broadcast
+```
+
+#### 4. Verify the deployed contracts
+
+```shell
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x2cffa8cf11b90c9f437567b86352169df4009f73 COWShed --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x00E989b87700514118Fa55326CD1cCE82faebEF6 COWShedFactory --guess-constructor-args
+```
