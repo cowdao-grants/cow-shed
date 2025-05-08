@@ -23,6 +23,10 @@
     "137": {
       "address": "0x2cffa8cf11b90c9f437567b86352169df4009f73",
       "transactionHash": "0x13c8c61d278d88b791b38474fd26c673854d316f90b008eee64540fb2c0eeb47"
+    },
+    "43114": {
+      "address": "0x2cffa8cf11b90c9f437567b86352169df4009f73",
+      "transactionHash": "0x20f25b32895e23f2bb988dcf956ce26795eb61007a47eacf4c734d5e5115c364"
     }
   },
   "COWShedFactory": {
@@ -49,6 +53,10 @@
     "137": {
       "address": "0x00e989b87700514118fa55326cd1cce82faebef6",
       "transactionHash": "0xbf55f09c0cc769801ca2abfa6c82887f887ee3c10838304b86aac9e8b339c231"
+    },
+    "43114": {
+      "address": "0x00e989b87700514118fa55326cd1cce82faebef6",
+      "transactionHash": "0x94ed55fa3f900c987ecf49488f15a50cd5fc14d7ea3289a2a0dbc24295831a01"
     }
   }
 }
