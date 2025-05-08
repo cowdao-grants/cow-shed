@@ -68,6 +68,9 @@ The contracts are deployed to the following networks:
 * `gnosis`
 * `arbitrum`
 * `sepolia`
+* `base`
+* `polygon`
+* `avalanche`
 
 ### Tests
 
@@ -86,4 +89,55 @@ Two examples are included for reference:
 The examples can be ran as follows:
 ```bash
 yarn ts-node examples/<example.ts>
+```
+
+### Deployment
+
+#### 0. Pre-requisites
+
+Even though the deterministic deployment is used, on the latest foundry versions, different addresses are generated.
+It is required to use the following foundry toolchain version:
+
+```shell
+foundryup -C cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5
+```
+
+#### 1. Build 
+
+```shell
+$ forge build
+```
+
+#### 2. Validate the deterministic addresses
+
+```shell
+forge script 'script/Deploy.s.sol:DeployScript' -vvvv --rpc-url "$RPC_URL" --private-key "$PK" "hooks.cow.eth" --sig "run(string)"
+```
+
+#### 3. Deploy
+
+```shell
+forge script 'script/Deploy.s.sol:DeployScript' -vvvv --rpc-url "$RPC_URL" --private-key "$PK" "hooks.cow.eth" --sig "run(string)" --broadcast
+```
+
+#### 4. Verify the deployed contracts
+
+```shell
+export ETHERSCAN_API_KEY='your API key here' # required only for etherscan based explorers
+
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x2cffa8cf11b90c9f437567b86352169df4009f73 COWShed --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x00E989b87700514118Fa55326CD1cCE82faebEF6 COWShedFactory --guess-constructor-args
+```
+
+#### 5. Commit the deployment file
+
+After successfully deploying the contracts, a deployment file is automatically generated in the `broadcast/Deploy.s.sol/` directory under the relevant chain subdirectory. Make sure to commit this file to the repository.
+
+#### 6. Deployment addresses
+
+The file [`networks.json`](./networks.json) lists all official deployments of the contracts in this repository by chain id.
+
+Update the file with:
+```sh
+bash dev/generate-networks-file.sh > networks.json
 ```
