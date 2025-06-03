@@ -3,9 +3,13 @@ src = "src"
 out = "out"
 libs = ["lib"]
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+# The following options are here to get deterministic deployment addresses
+# https://book.getfoundry.sh/guides/deterministic-deployments-using-create2#configuring-your-foundrytoml
+solc = "0.8.30"
+evm_version = "prague" # https://docs.soliditylang.org/en/latest/using-the-compiler.html#target-options
+bytecode_hash = "none"
+cbor_metadata = false
 
-solc = "0.8.25"
 via_ir = true
 optimizer_runs = 1_000_000
 
