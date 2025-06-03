@@ -8,6 +8,7 @@ import { COWShedResolver } from "./COWShedResolver.sol";
 
 contract COWShedFactory is COWShedResolver {
     error InvalidSignature();
+    error NoCodeAtImplementation();
     error NonceAlreadyUsed();
     error SettingEnsRecordsFailed();
 
@@ -20,6 +21,9 @@ contract COWShedFactory is COWShedResolver {
     mapping(address => address) public ownerOf;
 
     constructor(address impl, bytes32 bName, bytes32 bNode) COWShedResolver(bName, bNode) {
+        if (impl.code.length == 0) {
+            revert NoCodeAtImplementation();
+        }
         implementation = impl;
     }
 

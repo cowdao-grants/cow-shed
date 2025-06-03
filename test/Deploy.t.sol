@@ -30,7 +30,7 @@ contract DeployTest is Test {
 
     function testMatchesOfficialAddresses() external {
         address officialCowShedAddress = 0xc171C8ad2c294231e6f311A0355ADC5E8f38d856;
-        address officialFactoryAddress = 0xfFCAb412f11Aae31CCF6DCA53fa0c9D2a1B1C830;
+        address officialFactoryAddress = 0xCE82Dd7eFF54B31943F89e07a6e9813C5A3e42eb;
 
         DeployScript.Deployment memory deployment = script.deploy(DEPLOYED_ENS);
 
