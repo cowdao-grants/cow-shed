@@ -124,14 +124,15 @@ $ forge build
 #### 2. Validate the deterministic addresses
 
 ```shell
-forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' -vvvv --rpc-url "$RPC_URL" "hooks.cow.eth" --sig "run(string)"
+forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' --sig "run(string)" "hooks.cow.eth" --rpc-url "$RPC_URL" -vvvv
 ```
 
 #### 3. Deploy
 
-The deployment consists of two steps: deploying verified contract code on-chain and saving the compiler standard JSON input 
+The deployment consists of two steps: deploying verified contract code on-chain and saving the compiler standard JSON input
+
 ```shell
-forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' -vvvv --rpc-url "$RPC_URL" "hooks.cow.eth" --sig "run(string)" --private-key "$PK" --broadcast
+forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' --sig "run(string)" "hooks.cow.eth" --rpc-url "$RPC_URL" -vvvv --private-key "$PK" --broadcast
 ```
 
 #### 4. Verify the deployed contracts
