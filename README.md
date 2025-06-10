@@ -135,7 +135,7 @@ You can also run the script without the `--rpc-url` parameter to see the expecte
 
 #### 3. Deploy
 
-The deployment consists of two steps: deploying verified contract code on-chain and saving the compiler standard JSON input
+The deployment consists of two steps: deploying verified contract code on-chain and saving the compiler standard JSON input.
 
 ```shell
 forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' --sig "run(string)" "hooks.cow.eth" --rpc-url "$RPC_URL" -vvvv --private-key "$PK" --broadcast
