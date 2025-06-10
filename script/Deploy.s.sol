@@ -1,24 +1,31 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { Script } from "forge-std/Script.sol";
-import { COWShedFactory, COWShed } from "src/COWShedFactory.sol";
-import { LibString } from "solady/utils/LibString.sol";
+import {Script} from "forge-std/Script.sol";
+import {LibString} from "solady/utils/LibString.sol";
+
+import {COWShedFactory, COWShed} from "src/COWShedFactory.sol";
+
+bytes32 constant SALT = bytes32(0);
 
 contract DeployScript is Script {
-    function run(string calldata baseEns) external {
+    struct Deployment {
+        COWShed cowShed;
+        COWShedFactory factory;
+    }
+
+    function run(string calldata baseEns) external virtual {
+        deploy(baseEns);
+    }
+
+    function deploy(string calldata baseEns) public returns (Deployment memory) {
         bytes32 bName = LibString.toSmallString(baseEns);
         bytes32 bNode = vm.ensNamehash(baseEns);
 
-        vm.startBroadcast();
-        COWShed cowshed = new COWShed{salt: ""}();
-        COWShedFactory factory = new COWShedFactory{salt: ""}(address(cowshed), bName, bNode);
-        bytes memory initCode = vm.getCode("src/COWShedProxy.sol:COWShedProxy");
-
-        string memory addrJson = "deploymentAddresses.json";
-        vm.serializeAddress(addrJson, "factory", address(factory));
-        vm.serializeBytes(addrJson, "proxyInitCode", initCode);
-        string memory serialized = vm.serializeAddress(addrJson, "implementation", address(cowshed));
-        vm.writeJson(serialized, "deploymentAddresses.json");
-        vm.stopBroadcast();
+        vm.broadcast();
+        COWShed cowShed = new COWShed{salt: SALT}();
+        vm.broadcast();
+        COWShedFactory factory = new COWShedFactory{salt: SALT}(address(cowShed), bName, bNode);
+        return Deployment({cowShed: cowShed, factory: factory});
     }
 }

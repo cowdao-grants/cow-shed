@@ -1,0 +1,39 @@
+name: Check for standard JSON input updates
+
+on:
+  push:
+    paths:
+      - "/lib"
+      - "/networks.json"
+      - "/foundry.toml"
+      # We don't want to check for updates under /src because it might be too
+      # noisy: for example, if a comment changes there's no need to regenerate
+      # the standard input files, which are mainly used for contract
+      # verification on Etherscan.
+      # We listen for changes in the following test though because it hardcodes
+      # the official deployment addresses and should be updated if there's a
+      # new contract to deploy.
+      - "/test/Deploy.t.sol"
+
+jobs:
+  standard-json-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.2.1
+
+      - name: Check for changes to standard JSON input
+        run: |
+          bash ./dev/generate-solc-standard-input.sh
+
+          if git diff --exit-code HEAD -- ./dev/standard-json-input >/dev/null; then
+            echo "No changes detected to the standard JSON input folder."
+          else
+            echo "The standard JSON input file appears to have changed."
+            echo "Please regenerate them with the dedicated script in the readme."
+            exit 1
+          fi
