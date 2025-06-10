@@ -3,6 +3,9 @@ pragma solidity ^0.8.25;
 
 import {DeployScript} from "./Deploy.s.sol";
 
+/// @dev This script deploys all necessary contracts and create a json file with
+/// deployment information that will be used by the TS library in this
+/// repository.
 contract DeployAndRecordScript is DeployScript {
     function run(string calldata baseEns) external override {
         Deployment memory deployment = deploy(baseEns);
