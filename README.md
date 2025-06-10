@@ -123,9 +123,15 @@ $ forge build
 
 #### 2. Validate the deterministic addresses
 
+You can simulate the deployment on a network where the contracts aren't present yet with the following command.
+
 ```shell
 forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' --sig "run(string)" "hooks.cow.eth" --rpc-url "$RPC_URL" -vvvv
 ```
+
+If running on a network where the contracts are already deployed, the script is expected to revert.
+
+You can also run the script without the `--rpc-url` parameter to see the expected deployment addresses and generate the file `deploymentAddresses.json`.
 
 #### 3. Deploy
 
