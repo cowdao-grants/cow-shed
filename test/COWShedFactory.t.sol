@@ -12,6 +12,13 @@ import { ENS } from "src/ens.sol";
 contract COWShedFactoryTest is BaseTest {
     error ErrorSettingEns();
 
+    function testDeploymentFailsIfImplementationHasNoCode() external {
+        address emptyImplementation = makeAddr("empty COWShed");
+        assertEq(emptyImplementation.code, hex"");
+        vm.expectRevert(COWShedFactory.NoCodeAtImplementation.selector);
+        new COWShedFactory(emptyImplementation, baseName, baseNode);
+    }
+
     function testExecuteHooks() external {
         Vm.Wallet memory wallet = vm.createWallet("testWallet");
         address addr1 = makeAddr("addr1");
