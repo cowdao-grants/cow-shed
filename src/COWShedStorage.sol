@@ -19,6 +19,7 @@ contract COWShedStorage {
         bool initialized;
         address trustedExecutor;
         LibBitmap.Bitmap nonces;
+        LibBitmap.Bitmap signedNonces;
     }
 
     bytes32 internal constant STATE_STORAGE_SLOT = keccak256("COWShed.State");
@@ -41,5 +42,19 @@ contract COWShedStorage {
 
     function _isNonceUsed(bytes32 _nonce) internal view returns (bool) {
         return _state().nonces.get(uint256(_nonce));
+    }
+
+    function _signNonce(bytes32 _nonce, bool _signed) internal {
+        LibBitmap.Bitmap storage signedNonces = _state().signedNonces;
+        uint256 index = uint256(_nonce);
+        if (_signed) {
+            signedNonces.set(index);
+        } else {
+            signedNonces.unset(index);
+        }
+    }
+
+    function _isPreApprovedNonce(bytes32 _nonce) internal view returns (bool) {
+        return _state().signedNonces.get(uint256(_nonce));
     }
 }
