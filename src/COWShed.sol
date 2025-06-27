@@ -130,7 +130,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @notice EIP712 domain separator for the user proxy.
     function domainSeparator() public view returns (bytes32) {
         string memory name = "COWShed";
-        string memory version = "2.0.0";
+        string memory version = "1.1.0";
         return keccak256(
             abi.encode(domainTypeHash, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, address(this))
         );
