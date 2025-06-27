@@ -13,6 +13,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     error AlreadyInitialized();
     error OnlyAdmin();
     error OnlyAdminOrTrustedExecutorOrSelf();
+    error NonceNotPreApproved();
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
@@ -59,6 +60,25 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         if (!authorized) {
             revert InvalidSignature();
         }
+        _executeCalls(calls, nonce);
+    }
+
+    /// @notice Pre-signs (or revokes a pre-signature) for some hooks.
+    /// After signing, the call to executePreSignedHooks will succeed (if done within the deadline).
+    function signHooks(Call[] calldata calls, uint256 deadline, bool signed) external onlyAdmin {
+        bytes32 nonce = _getNonce(calls, deadline);
+        _signNonce(nonce, signed);
+    }
+
+    /// @notice execute a set of pre-signed hooks.
+    function executePreSignedHooks(Call[] calldata calls, uint256 deadline) external {
+        LibAuthenticatedHooks.verifyDeadline(deadline);
+
+        bytes32 nonce = _getNonce(calls, deadline);
+        if (!_isPreApprovedNonce(nonce)) {
+            revert NonceNotPreApproved();
+        }
+
         _executeCalls(calls, nonce);
     }
 
@@ -125,5 +145,12 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     function _executeCalls(Call[] calldata calls, bytes32 nonce) internal {
         _useNonce(nonce);
         LibAuthenticatedHooks.executeCalls(calls);
+    }
+
+    /// @dev Returns the nonce based on the calls and deadline.
+    /// This is the standard nonce convention used for pre-signing: the nonce is a hash of the calls and deadline.
+    /// Other flows can use this or any other method to generate a nonce.
+    function _getNonce(Call[] calldata calls, uint256 deadline) internal view returns (bytes32) {
+        return keccak256(abi.encode(calls, deadline));
     }
 }
