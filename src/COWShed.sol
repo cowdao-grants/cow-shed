@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { ICOWAuthHook, Call } from "./ICOWAuthHook.sol";
-import { LibAuthenticatedHooks } from "./LibAuthenticatedHooks.sol";
-import { COWShedStorage, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
-import { REVERSE_REGISTRAR } from "./ens.sol";
+import {ICOWAuthHook, Call} from "./ICOWAuthHook.sol";
+import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
+import {COWShedStorage, IMPLEMENTATION_STORAGE_SLOT} from "./COWShedStorage.sol";
+import {REVERSE_REGISTRAR} from "./ens.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
@@ -13,6 +13,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     error AlreadyInitialized();
     error OnlyAdmin();
     error OnlyAdminOrTrustedExecutorOrSelf();
+    error NonceNotPreApproved();
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
@@ -60,6 +61,25 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _executeCalls(calls, nonce);
     }
 
+    /// @notice Pre-signs (or revokes a pre-signature) for some hooks.
+    /// After signing, the call to executePreSignedHooks will succeed (if done within the deadline).
+    function signHooks(Call[] calldata calls, uint256 deadline, bool signed) external onlyAdmin {
+        bytes32 nonce = _getNonce(calls, deadline);
+        _signNonce(nonce, signed);
+    }
+
+    /// @notice execute a set of pre-signed hooks.
+    function executePreSignedHooks(Call[] calldata calls, uint256 deadline) external {
+        LibAuthenticatedHooks.verifyDeadline(deadline);
+
+        bytes32 nonce = _getNonce(calls, deadline);
+        if (!_isPreApprovedNonce(nonce)) {
+            revert NonceNotPreApproved();
+        }
+
+        _executeCalls(calls, nonce);
+    }
+
     /// @custom:todo doesn't make sense to commit some other contract's sigs nonce here.
     /// @inheritdoc ICOWAuthHook
     function trustedExecuteHooks(Call[] calldata calls) external onlyTrustedExecutor {
@@ -100,7 +120,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _useNonce(nonce);
     }
 
-    receive() external payable { }
+    receive() external payable {}
 
     /// @notice returns if a nonce is already used.
     function nonces(bytes32 nonce) external view returns (bool) {
@@ -110,7 +130,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @notice EIP712 domain separator for the user proxy.
     function domainSeparator() public view returns (bytes32) {
         string memory name = "COWShed";
-        string memory version = "1.0.0";
+        string memory version = "2.0.0";
         return keccak256(
             abi.encode(domainTypeHash, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, address(this))
         );
@@ -124,5 +144,12 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     function _executeCalls(Call[] calldata calls, bytes32 nonce) internal {
         _useNonce(nonce);
         LibAuthenticatedHooks.executeCalls(calls);
+    }
+
+    /// @dev Returns the nonce based on the calls and deadline.
+    /// This is the standard nonce convention used for pre-signing: the nonce is a hash of the calls and deadline.
+    /// Other flows can use this or any other method to generate a nonce.
+    function _getNonce(Call[] calldata calls, uint256 deadline) internal view returns (bytes32) {
+        return keccak256(abi.encode(calls, deadline));
     }
 }
