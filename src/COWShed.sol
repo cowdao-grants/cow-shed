@@ -64,7 +64,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @notice Pre-signs (or revokes a pre-signature) for some hooks.
     /// After signing, the call to executePreSignedHooks will succeed (if done within the deadline).
     function signHooks(Call[] calldata calls, uint256 deadline, bool signed) external onlyAdmin {
-        bytes32 nonce = _getNonce(calls, deadline);
+        bytes32 nonce = getNonce(calls, deadline);
         _signNonce(nonce, signed);
     }
 
@@ -72,7 +72,8 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     function executePreSignedHooks(Call[] calldata calls, uint256 deadline) external {
         LibAuthenticatedHooks.verifyDeadline(deadline);
 
-        bytes32 nonce = _getNonce(calls, deadline);
+        bytes32 nonce = getNonce(calls, deadline);
+
         if (!_isPreApprovedNonce(nonce)) {
             revert NonceNotPreApproved();
         }
@@ -149,7 +150,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @dev Returns the nonce based on the calls and deadline.
     /// This is the standard nonce convention used for pre-signing: the nonce is a hash of the calls and deadline.
     /// Other flows can use this or any other method to generate a nonce.
-    function _getNonce(Call[] calldata calls, uint256 deadline) internal view returns (bytes32) {
+    function getNonce(Call[] calldata calls, uint256 deadline) public pure returns (bytes32) {
         return keccak256(abi.encode(calls, deadline));
     }
 }
