@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { COWShedStorage, COWShed, Call } from "src/COWShed.sol";
-import { Test, Vm } from "forge-std/Test.sol";
-import { COWShedFactory, COWShedProxy } from "src/COWShedFactory.sol";
-import { BaseTest } from "./BaseTest.sol";
-import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
+import {COWShedStorage, COWShed, Call} from "src/COWShed.sol";
+import {Test, Vm} from "forge-std/Test.sol";
+import {COWShedFactory, COWShedProxy} from "src/COWShedFactory.sol";
+import {BaseTest} from "./BaseTest.sol";
+import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 
 /// @dev dummy contract
 contract Stub {
@@ -15,7 +15,7 @@ contract Stub {
         revert Revert();
     }
 
-    function callWithValue() external payable { }
+    function callWithValue() external payable {}
 
     function returnUint() external pure returns (uint256) {
         return 420;
@@ -31,25 +31,29 @@ contract Stub {
 contract COWShedTest is BaseTest {
     Stub stub = new Stub();
 
+    Call callWithValue = Call({
+        target: address(stub),
+        value: 0.05 ether,
+        allowFailure: false,
+        callData: abi.encodeCall(stub.callWithValue, ()),
+        isDelegateCall: false
+    });
+
+    Call callWillRevert = Call({
+        target: address(stub),
+        value: 0,
+        allowFailure: true,
+        callData: abi.encodeCall(stub.willRevert, ()),
+        isDelegateCall: false
+    });
+
     function testExecuteHooks() external {
         // fund the proxy
         vm.deal(userProxyAddr, 1 ether);
 
         Call[] memory calls = new Call[](2);
-        calls[0] = Call({
-            target: address(stub),
-            value: 0.05 ether,
-            allowFailure: false,
-            callData: abi.encodeCall(stub.callWithValue, ()),
-            isDelegateCall: false
-        });
-        calls[1] = Call({
-            target: address(stub),
-            value: 0,
-            allowFailure: true,
-            callData: abi.encodeCall(stub.willRevert, ()),
-            isDelegateCall: false
-        });
+        calls[0] = callWithValue;
+        calls[1] = callWillRevert;
         bytes32 nonce = "1";
 
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
@@ -75,8 +79,7 @@ contract COWShedTest is BaseTest {
 
     function testExecuteHooksDeadline() external {
         Call[] memory calls = new Call[](1);
-        calls[0] =
-            Call({ target: address(0), value: 0, allowFailure: false, callData: hex"0011", isDelegateCall: false });
+        calls[0] = Call({target: address(0), value: 0, allowFailure: false, callData: hex"0011", isDelegateCall: false});
         bytes32 nonce = "deadline-nonce";
         uint256 deadline = block.timestamp - 1;
         bytes memory signature = _signForProxy(calls, nonce, deadline, user);
@@ -111,8 +114,7 @@ contract COWShedTest is BaseTest {
 
     function testRevokeNonce() external {
         Call[] memory calls = new Call[](1);
-        calls[0] =
-            Call({ target: address(0), callData: hex"0011", value: 0, allowFailure: false, isDelegateCall: false });
+        calls[0] = Call({target: address(0), callData: hex"0011", value: 0, allowFailure: false, isDelegateCall: false});
         bytes32 nonce = "nonce-to-revoke";
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
         assertFalse(userProxy.nonces(nonce), "nonce is already used");
@@ -179,20 +181,8 @@ contract COWShedTest is BaseTest {
         vm.deal(smartWalletProxyAddr, 1 ether);
 
         Call[] memory calls = new Call[](2);
-        calls[0] = Call({
-            target: address(stub),
-            value: 0.05 ether,
-            allowFailure: false,
-            callData: abi.encodeCall(stub.callWithValue, ()),
-            isDelegateCall: false
-        });
-        calls[1] = Call({
-            target: address(stub),
-            value: 0,
-            allowFailure: true,
-            callData: abi.encodeCall(stub.willRevert, ()),
-            isDelegateCall: false
-        });
+        calls[0] = callWithValue;
+        calls[1] = callWillRevert;
         bytes32 nonce = "1";
         bytes memory sig =
             _signWithSmartWalletForProxy(calls, nonce, _deadline(), smartWalletAddr, smartWalletProxyAddr);
@@ -205,5 +195,43 @@ contract COWShedTest is BaseTest {
         smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
 
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
+    }
+
+    function testPreSignFlowSuccess() external {
+        // GIVEN: user has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+
+        // GIVEN: user has presigned a call to send 0.05 ether to the stub
+        _presignForProxy(calls, deadline, true, user);
+
+        // WHEN: execute the pre-signed calls
+        smartWalletProxy.executePreSignedHooks(calls, deadline);
+
+        // THEN: the call is executed
+        vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
+
+        // THEN: the proxy sent 0.05 ether to the stub
+        assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
+        assertEq(address(userProxy).balance, 0.95 ether, "didnt send value as expected");
+    }
+
+    function testPreSignFlowUnsigned() external {
+        // GIVEN: user has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+
+        // GIVEN: user has not presigned a call
+
+        // WHEN: execute the pre-signed calls
+        // THEN: the call should revert
+        vm.expectRevert(COWShed.NonceNotPreApproved.selector);
+        smartWalletProxy.executePreSignedHooks(calls, deadline);
     }
 }

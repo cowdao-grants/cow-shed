@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { Test, Vm } from "forge-std/Test.sol";
-import { COWShed, Call } from "src/COWShed.sol";
-import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
-import { COWShedFactory } from "src/COWShedFactory.sol";
-import { IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
-import { ENS, INameResolver, IAddrResolver } from "src/ens.sol";
-import { LibString } from "solady/utils/LibString.sol";
+import {Test, Vm} from "forge-std/Test.sol";
+import {COWShed, Call} from "src/COWShed.sol";
+import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {COWShedFactory} from "src/COWShedFactory.sol";
+import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
+import {ENS, INameResolver, IAddrResolver} from "src/ens.sol";
+import {LibString} from "solady/utils/LibString.sol";
 
 /// @dev wrapper contract since the LibAuthenticatedHooks library only accepts
 ///      `calldata` params, not `memory` params.
@@ -152,6 +152,14 @@ contract BaseTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
+    function _presignForProxy(Call[] memory calls, uint256 deadline, bool signed, Vm.Wallet memory _wallet) internal {
+        address proxy = factory.proxyOf(_wallet.addr);
+        COWShed cowShed = COWShed(payable(proxy));
+
+        vm.prank(_wallet.addr);
+        cowShed.signHooks(calls, deadline, signed);
+    }
+
     function _signWithSmartWalletForProxy(
         Call[] memory calls,
         bytes32 nonce,
@@ -171,7 +179,7 @@ contract BaseTest is Test {
         bytes32 domainTypeHash =
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
         string memory name = "COWShed";
-        string memory version = "1.0.0";
+        string memory version = "1.1.0";
         uint256 chainId = block.chainid;
         address verifyingContract = proxy;
         return keccak256(
