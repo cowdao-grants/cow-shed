@@ -73,6 +73,13 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _signNonce(nonce, signed);
     }
 
+    /// @custom:todo doesn't make sense to commit some other contract's sigs nonce here.
+    /// @inheritdoc ICOWAuthHook
+    function trustedSignHooks(Call[] calldata calls, uint256 deadline, bool signed) external onlyTrustedExecutor {
+        bytes32 nonce = getNonce(calls, deadline);
+        _signNonce(nonce, signed);
+    }
+
     /// @notice execute a set of pre-signed hooks.
     function executePreSignedHooks(Call[] calldata calls, uint256 deadline) external {
         LibAuthenticatedHooks.verifyDeadline(deadline);
