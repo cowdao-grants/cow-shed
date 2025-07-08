@@ -62,6 +62,11 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _executeCalls(calls, nonce);
     }
 
+    /// @inheritdoc ICOWAuthHook
+    function executeHooksAdmin(Call[] calldata calls) external onlyAdmin {
+        LibAuthenticatedHooks.executeCalls(calls);
+    }
+
     /// @custom:todo doesn't make sense to commit some other contract's sigs nonce here.
     /// @inheritdoc ICOWAuthHook
     function trustedExecuteHooks(Call[] calldata calls) external onlyTrustedExecutor {
