@@ -209,7 +209,7 @@ contract COWShedTest is BaseTest {
         _presignForProxy(calls, deadline, true, user);
 
         // WHEN: execute the pre-signed calls
-        smartWalletProxy.executePreSignedHooks(calls, deadline);
+        userProxy.executePreSignedHooks(calls, deadline);
 
         // THEN: the call is executed
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
@@ -232,6 +232,6 @@ contract COWShedTest is BaseTest {
         // WHEN: execute the pre-signed calls
         // THEN: the call should revert
         vm.expectRevert(COWShed.NonceNotPreApproved.selector);
-        smartWalletProxy.executePreSignedHooks(calls, deadline);
+        userProxy.executePreSignedHooks(calls, deadline);
     }
 }
