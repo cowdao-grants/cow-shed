@@ -253,4 +253,37 @@ contract COWShedTest is BaseTest {
         vm.expectRevert(COWShed.NonceNotPreApproved.selector);
         userProxy.executePreSignedHooks(calls, deadline);
     }
+
+    function testExecuteHooksAdminSuccess() external {
+        // GIVEN: user has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+
+        // WHEN: the admin executes a call
+        // THEN: the call is executed
+        vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
+        vm.prank(user.addr);
+        userProxy.executeHooksAdmin(calls);
+
+        // THEN: the proxy sent 0.05 ether to the stub
+        assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
+        assertEq(address(userProxy).balance, 0.95 ether, "didnt send value as expected");
+    }
+
+    function testExecuteHooksAdminError() external {
+        // GIVEN: user has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+
+        // WHEN: someone else than the admin executes a call
+        // THEN: the call should revert
+        vm.expectRevert(COWShed.OnlyAdmin.selector);
+        address notAdmin = makeAddr("notAdmin");
+        vm.prank(notAdmin);
+        userProxy.executeHooksAdmin(calls);
+    }
 }
