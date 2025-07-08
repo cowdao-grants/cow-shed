@@ -72,7 +72,7 @@ contract COWShedFactory is COWShedResolver {
     /// @notice Pre-signs (or revokes a pre-signature) for some hooks.
     /// @dev Will deploy and initialize the user proxy at a deterministic address
     ///      if one doesn't already exist.
-    function signHooks(Call[] calldata calls, uint256 deadline, address user, bool signed) external {
+    function signHooks(Call[] calldata calls, uint256 deadline, bool signed, address user) external {
         address proxy = _getInitializedProxy(user);
 
         // sign the hooks, the authorization checks are implemented in the

@@ -22,14 +22,13 @@ contract COWShedFactoryTest is BaseTest {
     }
 
     function testExecuteHooks() external {
-        Call[] memory calls = _getCalls();
-
         // GIVEN: a proxy for the user hasn't been initialized
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
         // WHEN: Execute the signed hooks
         bytes32 nonce = "nonce";
+        Call[] memory calls = _getCalls();
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
         vm.expectCall(calls[0].target, calls[0].callData);
         vm.expectCall(calls[1].target, calls[1].callData);
@@ -40,10 +39,9 @@ contract COWShedFactoryTest is BaseTest {
     }
 
     function testExecuteHooksNonceAlreadyUsed() external {
-        Call[] memory calls = _getCalls();
-
         // WHEN: Given a pre-initialized proxy, with a consumed nonce
         bytes32 nonce = "nonce";
+        Call[] memory calls = _getCalls();
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
         vm.expectCall(calls[0].target, calls[0].callData);
         vm.expectCall(calls[1].target, calls[1].callData);
@@ -55,22 +53,44 @@ contract COWShedFactoryTest is BaseTest {
         factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
     }
 
-    // function testSignHooks() external {
+    function testSignHooksSuccess() external {
+        // GIVEN: A wallet that hasn't initialized a proxy
+        address expectedProxyAddress = factory.proxyOf(wallet.addr);
+        assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
-    //     address expectedProxyAddress = factory.proxyOf(wallet.addr);
-    //     assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
+        // WHEN: We sign the hooks
+        Call[] memory calls = _getCalls();
+        factory.signHooks(calls, _deadline(), true, wallet.addr);
 
-    //     bytes32 nonce = "nonce";
-    //     bytes memory signature = _signForProxy(calls, nonce, deadline, wallet);
-    //     vm.expectCall(addr1, calls[0].callData);
-    //     vm.expectCall(addr2, calls[1].callData);
+        // THEN: The proxy is initialized
+        assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
 
-    //     factory.signHooks(calls, deadline, wallet.addr, signature);
-    //     assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
+        // THEN: The proxy should have the hooks pre-signed
+        userProxy.executePreSignedHooks(calls, _deadline());
+        vm.expectCall(calls[0].target, calls[0].callData);
+        vm.expectCall(calls[1].target, calls[1].callData);
+    }
 
-    //     vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
-    //     factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
-    // }
+    function testSignHooksNotAdmin() external {
+        // GIVEN: A wallet that hasn't initialized a proxy
+        address expectedProxyAddress = factory.proxyOf(wallet.addr);
+        assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
+
+        // WHEN: We sign the hooks as a non-admin
+        // THEN: It should revert
+        Call[] memory calls = _getCalls();
+        vm.expectRevert(COWShed.OnlyAdmin.selector);
+        address notAdmin = makeAddr("notAdmin");
+        vm.prank(notAdmin);
+        factory.signHooks(calls, _deadline(), true, wallet.addr);
+
+        // THEN: The proxy should not be initialized
+        assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
+
+        // THEN: The proxy should not have the hooks pre-signed
+        vm.expectRevert(COWShed.NonceNotPreApproved.selector);
+        userProxy.executePreSignedHooks(calls, _deadline());
+    }
 
     function testExecuteHooksForRevertingEns() external {
         // revert setSubnodeRecord, but only for the factory's ens
@@ -80,12 +100,11 @@ contract COWShedFactoryTest is BaseTest {
             abi.encodePacked(ErrorSettingEns.selector)
         );
 
-        Call[] memory calls = _getCalls();
-
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
         bytes32 nonce = "nonce";
+        Call[] memory calls = _getCalls();
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
         vm.expectCall(calls[0].target, calls[0].callData);
         vm.expectCall(calls[1].target, calls[1].callData);
