@@ -21,7 +21,7 @@ contract COWShedFactoryTest is BaseTest {
         new COWShedFactory(emptyImplementation, baseName, baseNode);
     }
 
-    function testExecuteHooks() external {
+    function testExecuteHooksSignature() external {
         // GIVEN: a proxy for the user hasn't been initialized
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
@@ -53,43 +53,43 @@ contract COWShedFactoryTest is BaseTest {
         factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
     }
 
-    function testSignHooksSuccess() external {
+    function testSignHooks() external {
         // GIVEN: A wallet that hasn't initialized a proxy
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
         // WHEN: We sign the hooks
         Call[] memory calls = _getCalls();
-        factory.signHooks(calls, _deadline(), true, wallet.addr);
+        vm.prank(wallet.addr);
+        factory.signHooks(calls, _deadline(), true);
 
         // THEN: The proxy is initialized
         assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
 
-        // THEN: The proxy should have the hooks pre-signed
-        userProxy.executePreSignedHooks(calls, _deadline());
+        // THEN: The proxy should have the hooks pre-signed (so it can be executed by a non-admin)
+        COWShed proxy = COWShed(payable(expectedProxyAddress));
+        address notAdmin = makeAddr("notAdmin");
+        vm.prank(notAdmin);
         vm.expectCall(calls[0].target, calls[0].callData);
         vm.expectCall(calls[1].target, calls[1].callData);
+        proxy.executePreSignedHooks(calls, _deadline());
     }
 
-    function testSignHooksNotAdmin() external {
+    function testExecuteHooksAdmin() external {
         // GIVEN: A wallet that hasn't initialized a proxy
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
-        // WHEN: We sign the hooks as a non-admin
-        // THEN: It should revert
+        // WHEN: We execute the hooks as admin
+        // THEN: The calls have been executed
         Call[] memory calls = _getCalls();
-        vm.expectRevert(COWShed.OnlyAdmin.selector);
-        address notAdmin = makeAddr("notAdmin");
-        vm.prank(notAdmin);
-        factory.signHooks(calls, _deadline(), true, wallet.addr);
+        vm.expectCall(calls[0].target, calls[0].callData);
+        vm.expectCall(calls[1].target, calls[1].callData);
+        vm.prank(wallet.addr);
+        factory.executeHooksAdmin(calls);
 
-        // THEN: The proxy should not be initialized
-        assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
-
-        // THEN: The proxy should not have the hooks pre-signed
-        vm.expectRevert(COWShed.NonceNotPreApproved.selector);
-        userProxy.executePreSignedHooks(calls, _deadline());
+        // THEN: The proxy is initialized
+        assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
     }
 
     function testExecuteHooksForRevertingEns() external {
