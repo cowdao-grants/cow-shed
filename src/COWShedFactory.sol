@@ -72,23 +72,21 @@ contract COWShedFactory is COWShedResolver {
     /// @notice Pre-signs (or revokes a pre-signature) for some hooks.
     /// @dev Will deploy and initialize the user proxy at a deterministic address
     ///      if one doesn't already exist.
-    function signHooks(Call[] calldata calls, uint256 deadline, bool signed, address user) external {
-        address proxy = _getInitializedProxy(user);
+    function signHooks(Call[] calldata calls, uint256 deadline, bool signed) external {
+        address proxy = _getInitializedProxy(msg.sender);
 
-        // sign the hooks, the authorization checks are implemented in the
-        // COWShed.signHooks function
-        COWShed(payable(proxy)).signHooks(calls, deadline, signed);
+        // sign the hooks, because we use the msg.sender to get the proxy address, we can consider the call authenticated
+        COWShed(payable(proxy)).trustedSignHooks(calls, deadline, signed);
     }
 
     /// @notice Execute a set of hooks as the admin.
     /// @dev Will deploy and initialize the user proxy at a deterministic address
     ///      if one doesn't already exist.
-    function executeHooksAdmin(Call[] calldata calls, address user) external {
-        address proxy = _getInitializedProxy(user);
+    function executeHooksAdmin(Call[] calldata calls) external {
+        address proxy = _getInitializedProxy(msg.sender);
 
-        // execute the hooks as the admin, the authorization checks are implemented in the
-        // COWShed.executeHooksAdmin function
-        COWShed(payable(proxy)).executeHooksAdmin(calls);
+        // execute the hooks as the admin. Because we use the msg.sender to get the proxy address, we can consider the call authenticated
+        COWShed(payable(proxy)).trustedExecuteHooks(calls);
     }
 
     /// @notice returns the address where the user proxy will get deployed. It is deterministic
