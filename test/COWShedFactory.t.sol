@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { COWShedFactory } from "src/COWShedFactory.sol";
-import { Vm, Test } from "forge-std/Test.sol";
-import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
-import { COWShed } from "src/COWShed.sol";
-import { BaseTest } from "./BaseTest.sol";
-import { LibString } from "solady/utils/LibString.sol";
-import { ENS } from "src/ens.sol";
+import {COWShedFactory} from "src/COWShedFactory.sol";
+import {Vm, Test} from "forge-std/Test.sol";
+import {LibAuthenticatedHooks, Call} from "src/LibAuthenticatedHooks.sol";
+import {COWShed} from "src/COWShed.sol";
+import {BaseTest} from "./BaseTest.sol";
+import {LibString} from "solady/utils/LibString.sol";
+import {ENS} from "src/ens.sol";
 
 contract COWShedFactoryTest is BaseTest {
     error ErrorSettingEns();
+
+    Vm.Wallet wallet = vm.createWallet("testWallet");
 
     function testDeploymentFailsIfImplementationHasNoCode() external {
         address emptyImplementation = makeAddr("empty COWShed");
@@ -20,29 +22,55 @@ contract COWShedFactoryTest is BaseTest {
     }
 
     function testExecuteHooks() external {
-        Vm.Wallet memory wallet = vm.createWallet("testWallet");
-        address addr1 = makeAddr("addr1");
-        address addr2 = makeAddr("addr2");
+        Call[] memory calls = _getCalls();
 
-        Call[] memory calls = new Call[](2);
-        calls[0] =
-            Call({ target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false });
-
-        calls[1] = Call({ target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false });
-
+        // GIVEN: a proxy for the user hasn't been initialized
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
+        // WHEN: Execute the signed hooks
         bytes32 nonce = "nonce";
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
-        vm.expectCall(addr1, calls[0].callData);
-        vm.expectCall(addr2, calls[1].callData);
+        vm.expectCall(calls[0].target, calls[0].callData);
+        vm.expectCall(calls[1].target, calls[1].callData);
         factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
-        assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
 
+        // THEN: The proxy is initialized
+        assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
+    }
+
+    function testExecuteHooksNonceAlreadyUsed() external {
+        Call[] memory calls = _getCalls();
+
+        // WHEN: Given a pre-initialized proxy, with a consumed nonce
+        bytes32 nonce = "nonce";
+        bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
+        vm.expectCall(calls[0].target, calls[0].callData);
+        vm.expectCall(calls[1].target, calls[1].callData);
+        factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
+
+        // WHEN: We try to execute the same hooks again
+        // THEN: It should revert
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
         factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
     }
+
+    // function testSignHooks() external {
+
+    //     address expectedProxyAddress = factory.proxyOf(wallet.addr);
+    //     assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
+
+    //     bytes32 nonce = "nonce";
+    //     bytes memory signature = _signForProxy(calls, nonce, deadline, wallet);
+    //     vm.expectCall(addr1, calls[0].callData);
+    //     vm.expectCall(addr2, calls[1].callData);
+
+    //     factory.signHooks(calls, deadline, wallet.addr, signature);
+    //     assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
+
+    //     vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
+    //     factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
+    // }
 
     function testExecuteHooksForRevertingEns() external {
         // revert setSubnodeRecord, but only for the factory's ens
@@ -52,22 +80,15 @@ contract COWShedFactoryTest is BaseTest {
             abi.encodePacked(ErrorSettingEns.selector)
         );
 
-        Vm.Wallet memory wallet = vm.createWallet("testWallet");
-        address addr1 = makeAddr("addr1");
-        address addr2 = makeAddr("addr2");
-
-        Call[] memory calls = new Call[](2);
-        calls[0] =
-            Call({ target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false });
-        calls[1] = Call({ target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false });
+        Call[] memory calls = _getCalls();
 
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
 
         bytes32 nonce = "nonce";
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
-        vm.expectCall(addr1, calls[0].callData);
-        vm.expectCall(addr2, calls[1].callData);
+        vm.expectCall(calls[0].target, calls[0].callData);
+        vm.expectCall(calls[1].target, calls[1].callData);
         factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
         assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
     }
@@ -116,7 +137,7 @@ contract COWShedFactoryTest is BaseTest {
         factory.initializeProxy(userAddr, false);
         try this.resolveAddr(userAddr) {
             revert("resolution didnt fail");
-        } catch (bytes memory) { }
+        } catch (bytes memory) {}
         assertGt(proxyAddr.code.length, 0, "proxy is still not initialized");
     }
 
@@ -161,5 +182,16 @@ contract COWShedFactoryTest is BaseTest {
             ),
             "reverse resolution failed"
         );
+    }
+
+    function _getCalls() internal returns (Call[] memory) {
+        address addr1 = makeAddr("addr1");
+        address addr2 = makeAddr("addr2");
+
+        Call[] memory calls = new Call[](2);
+        calls[0] = Call({target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false});
+        calls[1] = Call({target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false});
+
+        return calls;
     }
 }
