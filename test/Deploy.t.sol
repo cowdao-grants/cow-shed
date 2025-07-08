@@ -32,8 +32,8 @@ contract DeployTest is Test {
         // Warning: these addresses currently don't match those in
         // `networks.json`. Since we expect other changes to the contracts,
         // we'll wait until all changes are done before redeploying.
-        address officialCowShedAddress = 0xb3478e8f2a50A33F831F82A1f3D437e75175295C;
-        address officialFactoryAddress = 0x3771E9291c7F87aEC3f467B7Ff264a5c0A0B4B3C;
+        address officialCowShedAddress = 0xb2177531455922518C933bBb6B556Ef14980F6e8;
+        address officialFactoryAddress = 0x1fe885F64e020cFa8554F4a6f263A923E34f1C33;
 
         DeployScript.Deployment memory deployment = script.deploy(DEPLOYED_ENS);
 
