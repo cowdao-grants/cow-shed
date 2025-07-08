@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { COWShed } from "./COWShed.sol";
-import { Call } from "./ICOWAuthHook.sol";
-import { COWShedProxy } from "./COWShedProxy.sol";
-import { COWShedResolver } from "./COWShedResolver.sol";
+import {COWShed} from "./COWShed.sol";
+import {Call} from "./ICOWAuthHook.sol";
+import {COWShedProxy} from "./COWShedProxy.sol";
+import {COWShedResolver} from "./COWShedResolver.sol";
 
 contract COWShedFactory is COWShedResolver {
     error InvalidSignature();
@@ -62,19 +62,33 @@ contract COWShedFactory is COWShedResolver {
         address user,
         bytes calldata signature
     ) external {
-        address proxy = proxyOf(user);
-        // initialize the proxy
-        bool newlyDeployed = _initializeProxy(user, proxy, true);
-
-        // set ens records if it is a newly deployed proxy
-        if (newlyDeployed) {
-            // initialize the ens state, dont care if it fails, hence, ignoring the return value
-            _initializeEns(user, proxy);
-        }
+        address proxy = _getInitializedProxy(user);
 
         // execute the hooks, the authorization checks are implemented in the
         // COWShed.executeHooks function
         COWShed(payable(proxy)).executeHooks(calls, nonce, deadline, signature);
+    }
+
+    /// @notice Pre-signs (or revokes a pre-signature) for some hooks.
+    /// @dev Will deploy and initialize the user proxy at a deterministic address
+    ///      if one doesn't already exist.
+    function signHooks(Call[] calldata calls, uint256 deadline, address user, bool signed) external {
+        address proxy = _getInitializedProxy(user);
+
+        // sign the hooks, the authorization checks are implemented in the
+        // COWShed.signHooks function
+        COWShed(payable(proxy)).signHooks(calls, deadline, signed);
+    }
+
+    /// @notice Execute a set of hooks as the admin.
+    /// @dev Will deploy and initialize the user proxy at a deterministic address
+    ///      if one doesn't already exist.
+    function executeHooksAdmin(Call[] calldata calls, address user) external {
+        address proxy = _getInitializedProxy(user);
+
+        // execute the hooks as the admin, the authorization checks are implemented in the
+        // COWShed.executeHooksAdmin function
+        COWShed(payable(proxy)).executeHooksAdmin(calls);
     }
 
     /// @notice returns the address where the user proxy will get deployed. It is deterministic
@@ -97,7 +111,7 @@ contract COWShedFactory is COWShedResolver {
     function _initializeProxy(address user, address proxy, bool claimResolver) internal returns (bool newlyDeployed) {
         // deploy and initialize proxy if it doesnt exist
         if (proxy.code.length == 0) {
-            COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }(implementation, user);
+            COWShedProxy newProxy = new COWShedProxy{salt: bytes32(uint256(uint160(user)))}(implementation, user);
             COWShed(payable(proxy)).initialize(address(this), claimResolver);
             emit COWShedBuilt(user, address(newProxy));
 
@@ -112,6 +126,21 @@ contract COWShedFactory is COWShedResolver {
         if (block.chainid == 1) {
             _setReverseNode(user, proxy);
             success = _setForwardNode(user, proxy);
+        }
+    }
+
+    /// @notice Helper function that initializes proxy and ENS for a user and returns the proxy address
+    /// @param user - User to initialize proxy for
+    /// @return proxy - The proxy address for the user
+    function _getInitializedProxy(address user) internal returns (address proxy) {
+        proxy = proxyOf(user);
+        // initialize the proxy
+        bool newlyDeployed = _initializeProxy(user, proxy, true);
+
+        // set ens records if it is a newly deployed proxy
+        if (newlyDeployed) {
+            // initialize the ens state, dont care if it fails, hence, ignoring the return value
+            _initializeEns(user, proxy);
         }
     }
 }
