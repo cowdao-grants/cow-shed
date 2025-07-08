@@ -21,7 +21,7 @@ contract COWShedFactoryTest is BaseTest {
         new COWShedFactory(emptyImplementation, baseName, baseNode);
     }
 
-    function testExecuteHooksSignature() external {
+    function testExecuteHooksSuccess() external {
         // GIVEN: a proxy for the user hasn't been initialized
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
