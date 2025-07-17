@@ -23,4 +23,6 @@ interface ICOWAuthHook {
     function executePreSignedHooks(Call[] calldata calls, uint256 deadline) external;
     // @notice sign a set of pre-signed hooks.
     function signHooks(Call[] calldata calls, uint256 deadline, bool signed) external;
+    // @notice sign a set of pre-signed hooks, only callable by the trusted executor.
+    function trustedSignHooks(Call[] calldata calls, uint256 deadline, bool signed) external;
 }
