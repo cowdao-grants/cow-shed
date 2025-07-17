@@ -116,7 +116,7 @@ forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' --sig "run(str
 ```shell
 export ETHERSCAN_API_KEY='your API key here' # required only for etherscan based explorers
 
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88 COWShed --guess-constructor-args && \
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88 COWShed --guess-constructor-args
 forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x312f92fe5f1710408B20D52A374fa29e099cFA86 COWShedFactory --guess-constructor-args
 ```
 
