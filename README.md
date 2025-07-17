@@ -59,20 +59,7 @@ cast lookup-address <proxy-address>
 
 ### Deployments
 
-As `cow-shed` makes use of determinstic deployment, it has the same deployment address across all EVM-compatible chains. The contracts are deployed to the following addresses:
-
-- `COWShedFactory`: `0x00E989b87700514118Fa55326CD1cCE82faebEF6`
-- `COWShed`: `0x2CFFA8cf11B90C9F437567b86352169dF4009F73` (implementation)
-
-The contracts are deployed to the following networks:
-
-- `mainnet`
-- `gnosis`
-- `arbitrum`
-- `sepolia`
-- `base`
-- `polygon`
-- `avalanche`
+As `cow-shed` makes use of determinstic deployment, it has the same deployment address across all EVM-compatible chains. The contracts are deployed to the [following addresses](./networks.json).
 
 ### Tests
 
@@ -139,7 +126,7 @@ forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' --sig "run(str
 ```shell
 export ETHERSCAN_API_KEY='your API key here' # required only for etherscan based explorers
 
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88 COWShed --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88 COWShed --guess-constructor-args && \
 forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x312f92fe5f1710408B20D52A374fa29e099cFA86 COWShedFactory --guess-constructor-args
 ```
 
