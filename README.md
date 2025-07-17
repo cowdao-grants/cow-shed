@@ -47,11 +47,11 @@ from the proxy address.
 
 ```sh
 # forward resolution
-$ cast resolve-name <user>.cowhooks.eth
+cast resolve-name <user>.cowhooks.eth
 <proxy-address>
 
 # reverse resolution
-$ cast lookup-address <proxy-address>
+cast lookup-address <proxy-address>
 <user>.cowhooks.eth
 ```
 
@@ -108,27 +108,10 @@ yarn ts-node examples/<example.ts>
 
 ### Deployment
 
-#### 0. Pre-requisites
-
-Even though the deterministic deployment is used, on the latest foundry versions, different addresses are generated.
-It is required to use the following foundry toolchain version:
-
-```shell
-foundryup --install 1.2.1
-```
-
-```
-$ forge --version
-forge Version: 1.2.1-v1.2.1
-Commit SHA: 42341d5c94947d566c21a539aead92c4c53837a2
-Build Timestamp: 2025-05-26T04:44:55.696771378Z (1748234695)
-Build Profile: maxperf
-```
-
 #### 1. Build
 
 ```shell
-$ forge build
+forge build
 ```
 
 #### 2. Validate the deterministic addresses
@@ -156,8 +139,8 @@ forge script 'script/DeployAndRecord.s.sol:DeployAndRecordScript' --sig "run(str
 ```shell
 export ETHERSCAN_API_KEY='your API key here' # required only for etherscan based explorers
 
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x2cffa8cf11b90c9f437567b86352169df4009f73 COWShed --guess-constructor-args
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x00E989b87700514118Fa55326CD1cCE82faebEF6 COWShedFactory --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88 COWShed --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x312f92fe5f1710408B20D52A374fa29e099cFA86 COWShedFactory --guess-constructor-args
 ```
 
 If this doesn't work, visit the block explorer web interface for each of the deployed contract and manually verify through the interface.
