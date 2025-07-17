@@ -25,8 +25,8 @@
       "transactionHash": "0x0bdc2e1394c31929786eda6c6028de8bd16f15adc73a6187ed7f96026e5609e6"
     },
     "8453": {
-      "address": "0x2cffa8cf11b90c9f437567b86352169df4009f73",
-      "transactionHash": "0xe05f55111731d3c52c67f97a00dbacdc34bbf2a51a3bbeab1b28985429e4fccc"
+      "address": "0xa2704cf562ad418bf0453f4b662ebf6a2489ed88",
+      "transactionHash": "0x986c0d60bb9488b95cfd547a9058e0c6a5714bce30911987f22899066e2a026f"
     }
   },
   "COWShedFactory": {
@@ -55,8 +55,8 @@
       "transactionHash": "0xcf5f0c9a40d26d09e497a6ce871df31ca13d8e72b1724d8ba015368cf36068f1"
     },
     "8453": {
-      "address": "0x00e989b87700514118fa55326cd1cce82faebef6",
-      "transactionHash": "0x9b7889e3fe9a5dacdbd4ada5b3d046bb262c404cb04abd3547f3fa0775f13a16"
+      "address": "0x312f92fe5f1710408b20d52a374fa29e099cfa86",
+      "transactionHash": "0x29c63a32edbf7b29ae73e6a8e5293b65c65906943ad41092205a473e4bbf56d0"
     }
   }
 }
