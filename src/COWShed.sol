@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { ICOWAuthHook, Call } from "./ICOWAuthHook.sol";
-import { LibAuthenticatedHooks } from "./LibAuthenticatedHooks.sol";
-import { COWShedStorage, IMPLEMENTATION_STORAGE_SLOT } from "./COWShedStorage.sol";
-import { REVERSE_REGISTRAR } from "./ens.sol";
+import {ICOWAuthHook, Call} from "./ICOWAuthHook.sol";
+import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
+import {COWShedStorage, IMPLEMENTATION_STORAGE_SLOT} from "./COWShedStorage.sol";
+import {REVERSE_REGISTRAR} from "./ens.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
@@ -100,7 +100,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _useNonce(nonce);
     }
 
-    receive() external payable { }
+    receive() external payable {}
 
     /// @notice returns if a nonce is already used.
     function nonces(bytes32 nonce) external view returns (bool) {
@@ -110,7 +110,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @notice EIP712 domain separator for the user proxy.
     function domainSeparator() public view returns (bytes32) {
         string memory name = "COWShed";
-        string memory version = "1.0.0";
+        string memory version = "1.0.1";
         return keccak256(
             abi.encode(domainTypeHash, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, address(this))
         );
