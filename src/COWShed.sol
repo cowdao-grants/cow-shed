@@ -17,6 +17,8 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
 
+    string public constant VERSION = "1.0.1";
+
     bytes32 internal constant domainTypeHash =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
@@ -110,9 +112,8 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @notice EIP712 domain separator for the user proxy.
     function domainSeparator() public view returns (bytes32) {
         string memory name = "COWShed";
-        string memory version = "1.0.1";
         return keccak256(
-            abi.encode(domainTypeHash, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, address(this))
+            abi.encode(domainTypeHash, keccak256(bytes(name)), keccak256(bytes(VERSION)), block.chainid, address(this))
         );
     }
 
