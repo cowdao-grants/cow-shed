@@ -78,8 +78,18 @@ The contracts are deployed to the following networks:
 
 Fork testing is only used for the forward/reverse resolution testing of the ENS names for the proxies.
 
+To run all the tests, execute the following command:
+
 ```bash
-forge test -vvv --fork-url https://eth.llamarpc.com
+forge test
+```
+
+By default it selects a free RPC for testing. You can manually specify it if it reveals to be unreliable by exporting the environmental variable `MAINNET_ARCHIVE_NODE_URL`.
+
+You can also run only local tests with:
+
+```bash
+forge test --no-match-contract 'Forked*'
 ```
 
 ### Examples

@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 import { COWShedStorage, COWShed, Call } from "src/COWShed.sol";
 import { Test, Vm } from "forge-std/Test.sol";
 import { COWShedFactory, COWShedProxy } from "src/COWShedFactory.sol";
-import { BaseTest } from "./BaseTest.sol";
+import { BaseForkedTest } from "./BaseForkedTest.sol";
 import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
 
 /// @dev dummy contract
@@ -28,8 +28,13 @@ contract Stub {
     }
 }
 
-contract COWShedTest is BaseTest {
-    Stub stub = new Stub();
+contract ForkedCOWShedTest is BaseForkedTest {
+    Stub stub;
+
+    function setUp() public override {
+        super.setUp();
+        stub = new Stub();
+    }
 
     function testExecuteHooks() external {
         // fund the proxy

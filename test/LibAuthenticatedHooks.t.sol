@@ -3,13 +3,13 @@ pragma solidity ^0.8.25;
 
 import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
 import { Test } from "forge-std/Test.sol";
-import { BaseTest } from "./BaseTest.sol";
+import { LibAuthenticatedHooksCalldataProxy } from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
 
 // mostly testing the eip712 encoding, hashing, etc.
 // it is differentially tested against the output of ethers' code for
 // doing the same. See [./ts/testUtil.ts]
-contract LibAuthenticatedHooksTest is BaseTest {
-    function setUp() external override { }
+contract LibAuthenticatedHooksTest is Test {
+    LibAuthenticatedHooksCalldataProxy cproxy = new LibAuthenticatedHooksCalldataProxy();
 
     function testExecuteHooksHash() external view {
         Call[] memory calls = new Call[](2);

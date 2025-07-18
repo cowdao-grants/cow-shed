@@ -5,11 +5,11 @@ import { COWShedFactory } from "src/COWShedFactory.sol";
 import { Vm, Test } from "forge-std/Test.sol";
 import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
 import { COWShed } from "src/COWShed.sol";
-import { BaseTest } from "./BaseTest.sol";
+import { BaseForkedTest } from "./BaseForkedTest.sol";
 import { LibString } from "solady/utils/LibString.sol";
 import { ENS } from "src/ens.sol";
 
-contract COWShedFactoryTest is BaseTest {
+contract ForkedCOWShedFactoryTest is BaseForkedTest {
     error ErrorSettingEns();
 
     function testDeploymentFailsIfImplementationHasNoCode() external {
