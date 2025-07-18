@@ -8,6 +8,7 @@ import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
 import {ENS, INameResolver, IAddrResolver} from "src/ens.sol";
 import {LibString} from "solady/utils/LibString.sol";
+import {console} from "forge-std/console.sol";
 
 /// @dev wrapper contract since the LibAuthenticatedHooks library only accepts
 ///      `calldata` params, not `memory` params.
@@ -171,7 +172,7 @@ contract BaseTest is Test {
         bytes32 domainTypeHash =
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
         string memory name = "COWShed";
-        string memory version = "1.0.1";
+        string memory version = COWShed(payable(factory.implementation())).VERSION();
         uint256 chainId = block.chainid;
         address verifyingContract = proxy;
         return keccak256(
