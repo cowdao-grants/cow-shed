@@ -149,7 +149,7 @@ contract BaseForkedTest is Test {
         bytes32 domainTypeHash =
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
         string memory name = "COWShed";
-        string memory version = "1.0.1";
+        string memory version = COWShed(payable(factory.implementation())).VERSION();
         uint256 chainId = block.chainid;
         address verifyingContract = proxy;
         return keccak256(
