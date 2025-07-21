@@ -84,7 +84,7 @@ To run all the tests, execute the following command:
 forge test
 ```
 
-By default it selects a free RPC for testing. You can manually specify it if it reveals to be unreliable by exporting the environmental variable `MAINNET_ARCHIVE_NODE_URL`.
+By default, it uses a free RPC for testing. To use your own, set the `MAINNET_ARCHIVE_NODE_URL` environment variable.
 
 You can also run only local tests with:
 
