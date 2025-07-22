@@ -28,10 +28,17 @@ jobs:
           forge build --sizes
         id: build
 
-      - name: Run Forge tests
+      - name: Run local Forge tests
         run: |
-          forge test -vvv --fork-url ${{ secrets.RPC_URL }}
-        id: test
+          forge test --no-match-contract 'Forked*' -vvv
+        id: local-test
+
+      - name: Run forked Forge tests
+        run: |
+          forge test --match-contract 'Forked*' -vvv
+        env:
+          MAINNET_ARCHIVE_NODE_URL: ${{ secrets.RPC_URL }}
+        id: forked-test
   sdk_check:
     strategy:
       fail-fast: true
