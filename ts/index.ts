@@ -5,8 +5,8 @@ import {
   solidityPackedKeccak256,
   TypedDataDomain,
   TypedDataEncoder,
-} from 'ethers_v6';
-import { FACTORY_ABI, PROXY_CREATION_CODE, SHED_ABI } from './constants';
+} from "ethers_v6";
+import { FACTORY_ABI, PROXY_CREATION_CODE, SHED_ABI } from "./constants";
 
 export interface ISdkOptions {
   factoryAddress: string;
@@ -33,25 +33,25 @@ const ABI_CODER = new ethers.AbiCoder();
 
 const DOMAIN_TYPE = {
   EIP712Domain: [
-    { type: 'string', name: 'name' },
-    { type: 'string', name: 'version' },
-    { type: 'uint256', name: 'chainId' },
-    { type: 'address', name: 'verifyingContract' },
+    { type: "string", name: "name" },
+    { type: "string", name: "version" },
+    { type: "uint256", name: "chainId" },
+    { type: "address", name: "verifyingContract" },
   ],
 };
 
 const COW_SHED_712_TYPES = {
   ExecuteHooks: [
-    { type: 'Call[]', name: 'calls' },
-    { type: 'bytes32', name: 'nonce' },
-    { type: 'uint256', name: 'deadline' },
+    { type: "Call[]", name: "calls" },
+    { type: "bytes32", name: "nonce" },
+    { type: "uint256", name: "deadline" },
   ],
   Call: [
-    { type: 'address', name: 'target' },
-    { type: 'uint256', name: 'value' },
-    { type: 'bytes', name: 'callData' },
-    { type: 'bool', name: 'allowFailure' },
-    { type: 'bool', name: 'isDelegateCall' },
+    { type: "address", name: "target" },
+    { type: "uint256", name: "value" },
+    { type: "bytes", name: "callData" },
+    { type: "bool", name: "allowFailure" },
+    { type: "bool", name: "isDelegateCall" },
   ],
 };
 const TYPED_DATA_ENCODER = new TypedDataEncoder(COW_SHED_712_TYPES);
@@ -63,13 +63,13 @@ export class CowShedSdk {
   constructor(private options: ISdkOptions) {}
 
   computeProxyAddress(user: string) {
-    const salt = ABI_CODER.encode(['address'], [user]);
+    const salt = ABI_CODER.encode(["address"], [user]);
     const initCodeHash = solidityPackedKeccak256(
-      ['bytes', 'bytes'],
+      ["bytes", "bytes"],
       [
         this._proxyCreationCode(),
         ABI_CODER.encode(
-          ['address', 'address'],
+          ["address", "address"],
           [this.options.implementationAddress, user]
         ),
       ]
@@ -79,7 +79,7 @@ export class CowShedSdk {
 
   computeDomainSeparator(proxy: string) {
     return TypedDataEncoder.hashStruct(
-      'EIP712Domain',
+      "EIP712Domain",
       DOMAIN_TYPE,
       this._getDomain(proxy)
     );
@@ -115,7 +115,7 @@ export class CowShedSdk {
     user: string,
     signature: string
   ) {
-    return FACTORY_INTERFACE.encodeFunctionData('executeHooks', [
+    return FACTORY_INTERFACE.encodeFunctionData("executeHooks", [
       calls,
       nonce,
       deadline,
@@ -130,7 +130,7 @@ export class CowShedSdk {
     deadline: bigint,
     signature: string
   ) {
-    return SHED_INTERFACE.encodeFunctionData('executeHooks', [
+    return SHED_INTERFACE.encodeFunctionData("executeHooks", [
       calls,
       nonce,
       deadline,
@@ -139,7 +139,7 @@ export class CowShedSdk {
   }
 
   static encodeEOASignature(r: bigint, s: bigint, v: number) {
-    return solidityPacked(['uint', 'uint', 'uint8'], [r, s, v]);
+    return solidityPacked(["uint", "uint", "uint8"], [r, s, v]);
   }
 
   private _hashToSign(
@@ -162,8 +162,8 @@ export class CowShedSdk {
 
   private _getDomain(proxy: string): TypedDataDomain {
     const domain: TypedDataDomain = {
-      name: 'COWShed',
-      version: '1.0.0',
+      name: "COWShed",
+      version: "1.0.1",
       chainId: this.options.chainId,
       verifyingContract: proxy,
     };
