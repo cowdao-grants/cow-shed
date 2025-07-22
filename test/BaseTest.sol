@@ -8,7 +8,6 @@ import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
 import {ENS, INameResolver, IAddrResolver} from "src/ens.sol";
 import {LibString} from "solady/utils/LibString.sol";
-import {console} from "forge-std/console.sol";
 
 /// @dev wrapper contract since the LibAuthenticatedHooks library only accepts
 ///      `calldata` params, not `memory` params.
