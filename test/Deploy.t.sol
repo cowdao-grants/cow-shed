@@ -33,7 +33,7 @@ contract DeployTest is Test {
         // `networks.json`. Since we expect other changes to the contracts,
         // we'll wait until all changes are done before redeploying.
         address officialCowShedAddress = 0xc171C8ad2c294231e6f311A0355ADC5E8f38d856;
-        address officialFactoryAddress = 0xCE82Dd7eFF54B31943F89e07a6e9813C5A3e42eb;
+        address officialFactoryAddress = 0xB94371efafaB916EE50eEb8e0528F572Baf1961E;
 
         DeployScript.Deployment memory deployment = script.deploy(DEPLOYED_ENS);
 

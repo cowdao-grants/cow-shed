@@ -65,7 +65,8 @@ const deployCowShed = async (provider: ethers.JsonRpcProvider, key: string) => {
 
   const execPromise = new Promise((resolve, reject) => {
     exec(
-      `${forgePath} script ./script/Deploy.s.sol:DeployScript --sig "run(string)" ${ensName} --broadcast --rpc-url ${provider._getConnection().url
+      `${forgePath} script ./script/DeployAndRecord.s.sol:DeployAndRecordScript --sig "run(string)" ${ensName} --broadcast --rpc-url ${
+        provider._getConnection().url
       } --private-key ${key}`,
       { cwd: parentDir },
       (error) => {
