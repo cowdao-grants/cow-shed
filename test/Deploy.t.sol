@@ -29,9 +29,6 @@ contract DeployTest is Test {
     }
 
     function testMatchesOfficialAddresses() external {
-        // Warning: these addresses currently don't match those in
-        // `networks.json`. Since we expect other changes to the contracts,
-        // we'll wait until all changes are done before redeploying.
         address officialCowShedAddress = 0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88;
         address officialFactoryAddress = 0x312f92fe5f1710408B20D52A374fa29e099cFA86;
 
