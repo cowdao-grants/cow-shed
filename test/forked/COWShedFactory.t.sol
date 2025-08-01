@@ -7,7 +7,6 @@ import {LibString} from "solady/utils/LibString.sol";
 import {COWShed} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
 import {Call, LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
-
 import {ENS} from "src/ens.sol";
 
 contract ForkedCOWShedFactoryTest is BaseForkedTest {

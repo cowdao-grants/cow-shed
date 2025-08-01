@@ -2,7 +2,6 @@
 pragma solidity ^0.8.25;
 
 import {COWShed} from "./COWShed.sol";
-
 import {COWShedProxy} from "./COWShedProxy.sol";
 import {COWShedResolver} from "./COWShedResolver.sol";
 import {Call} from "./ICOWAuthHook.sol";
