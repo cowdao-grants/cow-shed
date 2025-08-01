@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { Test, Vm } from "forge-std/Test.sol";
-import { COWShed, Call } from "src/COWShed.sol";
-import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
-import { COWShedFactory } from "src/COWShedFactory.sol";
-import { IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
-import { ENS, INameResolver, IAddrResolver } from "src/ens.sol";
-import { LibString } from "solady/utils/LibString.sol";
-import { LibAuthenticatedHooksCalldataProxy } from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
-import { ForkedRpc } from "test/forked/ForkedRpc.sol";
-
+import {Test, Vm} from "forge-std/Test.sol";
+import {COWShed, Call} from "src/COWShed.sol";
+import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {COWShedFactory} from "src/COWShedFactory.sol";
+import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
+import {ENS, INameResolver, IAddrResolver} from "src/ens.sol";
+import {LibString} from "solady/utils/LibString.sol";
+import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
+import {ForkedRpc} from "test/forked/ForkedRpc.sol";
 
 /// @dev Simple single owner smart wallet account that will verify signatures against
 ///      pre-approved and stored signatures for given hashes.
@@ -150,7 +149,7 @@ contract BaseForkedTest is Test {
         bytes32 domainTypeHash =
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
         string memory name = "COWShed";
-        string memory version = "1.0.0";
+        string memory version = COWShed(payable(factory.implementation())).VERSION();
         uint256 chainId = block.chainid;
         address verifyingContract = proxy;
         return keccak256(
