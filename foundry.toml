@@ -14,3 +14,6 @@ via_ir = true
 optimizer_runs = 1_000_000
 
 fs_permissions = [{ access = "write", path = "deploymentAddresses.json"}]
+
+[fmt]
+sort_imports = true

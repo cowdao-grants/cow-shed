@@ -4,8 +4,8 @@ pragma solidity ^0.8.25;
 import {Test} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
-import {COWShedFactory, COWShed} from "src/COWShedFactory.sol";
 import {DeployScript, SALT} from "script/Deploy.s.sol";
+import {COWShed, COWShedFactory} from "src/COWShedFactory.sol";
 
 contract DeployTest is Test {
     string constant TEST_ENS = "base ENS";
