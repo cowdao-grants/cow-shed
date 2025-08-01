@@ -2,7 +2,7 @@
 pragma solidity ^0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {Call, LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {Call} from "src/LibAuthenticatedHooks.sol";
 import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
 
 // mostly testing the eip712 encoding, hashing, etc.

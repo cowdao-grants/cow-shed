@@ -2,11 +2,11 @@
 pragma solidity ^0.8.25;
 
 import {BaseForkedTest} from "./BaseForkedTest.sol";
-import {Test, Vm} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {COWShed} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
-import {Call, LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {Call} from "src/LibAuthenticatedHooks.sol";
 import {ENS} from "src/ens.sol";
 
 contract ForkedCOWShedFactoryTest is BaseForkedTest {

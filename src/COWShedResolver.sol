@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import {
-    ADDR_REVERSE_NODE, ENS, IAddrResolver, IENS, INameResolver, IReverseRegistrar, sha3HexAddress
-} from "./ens.sol";
+import {ADDR_REVERSE_NODE, ENS, IAddrResolver, INameResolver, sha3HexAddress} from "./ens.sol";
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
