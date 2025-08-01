@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { COWShed } from "./COWShed.sol";
-import { Call } from "./ICOWAuthHook.sol";
-import { COWShedProxy } from "./COWShedProxy.sol";
-import { COWShedResolver } from "./COWShedResolver.sol";
+import {COWShed} from "./COWShed.sol";
+
+import {COWShedProxy} from "./COWShedProxy.sol";
+import {COWShedResolver} from "./COWShedResolver.sol";
+import {Call} from "./ICOWAuthHook.sol";
 
 contract COWShedFactory is COWShedResolver {
     error InvalidSignature();
@@ -97,7 +98,7 @@ contract COWShedFactory is COWShedResolver {
     function _initializeProxy(address user, address proxy, bool claimResolver) internal returns (bool newlyDeployed) {
         // deploy and initialize proxy if it doesnt exist
         if (proxy.code.length == 0) {
-            COWShedProxy newProxy = new COWShedProxy{ salt: bytes32(uint256(uint160(user))) }(implementation, user);
+            COWShedProxy newProxy = new COWShedProxy{salt: bytes32(uint256(uint160(user)))}(implementation, user);
             COWShed(payable(proxy)).initialize(address(this), claimResolver);
             emit COWShedBuilt(user, address(newProxy));
 

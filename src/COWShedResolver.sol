@@ -2,10 +2,11 @@
 pragma solidity ^0.8.25;
 
 import {
-    INameResolver, IReverseRegistrar, IENS, IAddrResolver, ENS, ADDR_REVERSE_NODE, sha3HexAddress
+    ADDR_REVERSE_NODE, ENS, IAddrResolver, IENS, INameResolver, IReverseRegistrar, sha3HexAddress
 } from "./ens.sol";
-import { LibString } from "solady/utils/LibString.sol";
-import { IERC165 } from "forge-std/interfaces/IERC165.sol";
+
+import {IERC165} from "forge-std/interfaces/IERC165.sol";
+import {LibString} from "solady/utils/LibString.sol";
 
 abstract contract COWShedResolver is INameResolver, IAddrResolver, IERC165 {
     /// @notice maps the `<proxy-address>.<base-name>` node to the user address
@@ -70,6 +71,6 @@ abstract contract COWShedResolver is INameResolver, IAddrResolver, IERC165 {
         try ENS.setSubnodeRecord(baseNode, label, address(this), address(this), type(uint64).max) {
             success = true;
             forwardResolutionNodeToAddress[subnode] = proxy;
-        } catch (bytes memory) { }
+        } catch (bytes memory) {}
     }
 }

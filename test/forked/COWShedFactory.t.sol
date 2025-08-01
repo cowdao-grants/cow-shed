@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { COWShedFactory } from "src/COWShedFactory.sol";
-import { Vm, Test } from "forge-std/Test.sol";
-import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
-import { COWShed } from "src/COWShed.sol";
-import { BaseForkedTest } from "./BaseForkedTest.sol";
-import { LibString } from "solady/utils/LibString.sol";
-import { ENS } from "src/ens.sol";
+import {BaseForkedTest} from "./BaseForkedTest.sol";
+import {Test, Vm} from "forge-std/Test.sol";
+import {LibString} from "solady/utils/LibString.sol";
+import {COWShed} from "src/COWShed.sol";
+import {COWShedFactory} from "src/COWShedFactory.sol";
+import {Call, LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+
+import {ENS} from "src/ens.sol";
 
 contract ForkedCOWShedFactoryTest is BaseForkedTest {
     error ErrorSettingEns();
@@ -25,10 +26,9 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
         address addr2 = makeAddr("addr2");
 
         Call[] memory calls = new Call[](2);
-        calls[0] =
-            Call({ target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false });
+        calls[0] = Call({target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false});
 
-        calls[1] = Call({ target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false });
+        calls[1] = Call({target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false});
 
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
@@ -57,9 +57,8 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
         address addr2 = makeAddr("addr2");
 
         Call[] memory calls = new Call[](2);
-        calls[0] =
-            Call({ target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false });
-        calls[1] = Call({ target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false });
+        calls[0] = Call({target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false});
+        calls[1] = Call({target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false});
 
         address expectedProxyAddress = factory.proxyOf(wallet.addr);
         assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
@@ -116,7 +115,7 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
         factory.initializeProxy(userAddr, false);
         try this.resolveAddr(userAddr) {
             revert("resolution didnt fail");
-        } catch (bytes memory) { }
+        } catch (bytes memory) {}
         assertGt(proxyAddr.code.length, 0, "proxy is still not initialized");
     }
 

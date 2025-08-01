@@ -2,14 +2,16 @@
 pragma solidity ^0.8.25;
 
 import {Test, Vm} from "forge-std/Test.sol";
+
+import {LibString} from "solady/utils/LibString.sol";
 import {COWShed, Call} from "src/COWShed.sol";
-import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
-import {ENS, INameResolver, IAddrResolver} from "src/ens.sol";
-import {LibString} from "solady/utils/LibString.sol";
-import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
+import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {ENS, IAddrResolver, INameResolver} from "src/ens.sol";
+
 import {ForkedRpc} from "test/forked/ForkedRpc.sol";
+import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
 
 /// @dev Simple single owner smart wallet account that will verify signatures against
 ///      pre-approved and stored signatures for given hashes.

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { COWShed, Call } from "src/COWShed.sol";
-import { BaseForkedTest } from "./BaseForkedTest.sol";
-import { IMPLEMENTATION_STORAGE_SLOT } from "src/COWShedStorage.sol";
-import { COWShedProxy } from "src/COWShedProxy.sol";
-import { ENS, REVERSE_REGISTRAR } from "src/ens.sol";
+import {BaseForkedTest} from "./BaseForkedTest.sol";
+import {COWShed, Call} from "src/COWShed.sol";
+
+import {COWShedProxy} from "src/COWShedProxy.sol";
+import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
+import {ENS, REVERSE_REGISTRAR} from "src/ens.sol";
 
 contract ForkedCOWShedProxyTest is BaseForkedTest {
     function testAdmin() external {

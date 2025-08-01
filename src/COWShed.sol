@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import {ICOWAuthHook, Call} from "./ICOWAuthHook.sol";
-import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
 import {COWShedStorage, IMPLEMENTATION_STORAGE_SLOT} from "./COWShedStorage.sol";
+import {Call, ICOWAuthHook} from "./ICOWAuthHook.sol";
+import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
 import {REVERSE_REGISTRAR} from "./ens.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {

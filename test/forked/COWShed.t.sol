@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { COWShedStorage, COWShed, Call } from "src/COWShed.sol";
-import { Test, Vm } from "forge-std/Test.sol";
-import { COWShedFactory, COWShedProxy } from "src/COWShedFactory.sol";
-import { BaseForkedTest } from "./BaseForkedTest.sol";
-import { LibAuthenticatedHooks } from "src/LibAuthenticatedHooks.sol";
+import {BaseForkedTest} from "./BaseForkedTest.sol";
+import {Test, Vm} from "forge-std/Test.sol";
+import {COWShed, COWShedStorage, Call} from "src/COWShed.sol";
+import {COWShedFactory, COWShedProxy} from "src/COWShedFactory.sol";
+import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 
 /// @dev dummy contract
 contract Stub {
@@ -15,7 +15,7 @@ contract Stub {
         revert Revert();
     }
 
-    function callWithValue() external payable { }
+    function callWithValue() external payable {}
 
     function returnUint() external pure returns (uint256) {
         return 420;
@@ -80,8 +80,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
     function testExecuteHooksDeadline() external {
         Call[] memory calls = new Call[](1);
-        calls[0] =
-            Call({ target: address(0), value: 0, allowFailure: false, callData: hex"0011", isDelegateCall: false });
+        calls[0] = Call({target: address(0), value: 0, allowFailure: false, callData: hex"0011", isDelegateCall: false});
         bytes32 nonce = "deadline-nonce";
         uint256 deadline = block.timestamp - 1;
         bytes memory signature = _signForProxy(calls, nonce, deadline, user);
@@ -116,8 +115,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
     function testRevokeNonce() external {
         Call[] memory calls = new Call[](1);
-        calls[0] =
-            Call({ target: address(0), callData: hex"0011", value: 0, allowFailure: false, isDelegateCall: false });
+        calls[0] = Call({target: address(0), callData: hex"0011", value: 0, allowFailure: false, isDelegateCall: false});
         bytes32 nonce = "nonce-to-revoke";
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
         assertFalse(userProxy.nonces(nonce), "nonce is already used");

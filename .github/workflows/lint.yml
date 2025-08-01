@@ -1,0 +1,25 @@
+name: lint
+
+on: push
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  check:
+    name: Solidity linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.2.1
+
+      - name: Check Forge formatting rules
+        run: |
+          forge fmt --check
+        id: local-test

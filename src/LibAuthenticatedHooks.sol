@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { ECDSA } from "solady/utils/ECDSA.sol";
-import { Call } from "./ICOWAuthHook.sol";
+import {Call} from "./ICOWAuthHook.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
 
 interface IERC1271 {
     function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4);
@@ -154,7 +154,7 @@ library LibAuthenticatedHooks {
             if (call.isDelegateCall) {
                 (success, ret) = call.target.delegatecall(call.callData);
             } else {
-                (success, ret) = call.target.call{ value: call.value }(call.callData);
+                (success, ret) = call.target.call{value: call.value}(call.callData);
             }
             if (!success && !call.allowFailure) {
                 // bubble up the revert message
