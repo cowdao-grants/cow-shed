@@ -1,0 +1,14 @@
+{
+  "COWShed": {
+    "232": {
+      "address": "0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88",
+      "transactionHash": "0x74a283f97c35c844e36f0c3353ec40d0012032721f72ded5b783938aff8e98e8"
+    }
+  },
+  "COWShedFactory": {
+    "232": {
+      "address": "0x312f92fe5f1710408B20D52A374fa29e099cFA86",
+      "transactionHash": "0x53df62bc122ecb5bfa9770776bb54b3a81e5f7238e4b02c52ac7000eb36c86bd"
+    }
+  }
+}
