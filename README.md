@@ -141,11 +141,7 @@ After successfully deploying the contracts, a deployment file is automatically g
 
 The file [`networks.json`](./networks.json) lists all official deployments of the contracts in this repository by chain id.
 
-Update the file with:
-
-```sh
-bash dev/generate-networks-file.sh > networks.json
-```
+Update the file manually.
 
 #### 7. Update standard JSON input file, if needed
 
