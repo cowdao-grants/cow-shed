@@ -8,38 +8,8 @@ import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
 import {ENS, INameResolver, IAddrResolver} from "src/ens.sol";
 import {LibString} from "solady/utils/LibString.sol";
-
-/// @dev wrapper contract since the LibAuthenticatedHooks library only accepts
-///      `calldata` params, not `memory` params.
-contract LibAuthenticatedHooksCalldataProxy {
-    function executeHooksMessageHash(Call[] calldata calls, bytes32 nonce, uint256 deadline)
-        external
-        pure
-        returns (bytes32)
-    {
-        return LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
-    }
-
-    function hashToSign(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes32 domainSeparator)
-        external
-        pure
-        returns (bytes32)
-    {
-        return LibAuthenticatedHooks.hashToSign(calls, nonce, deadline, domainSeparator);
-    }
-
-    function callsHash(Call[] calldata calls) external pure returns (bytes32) {
-        return LibAuthenticatedHooks.callsHash(calls);
-    }
-
-    function callHash(Call calldata cll) external pure returns (bytes32) {
-        return LibAuthenticatedHooks.callHash(cll);
-    }
-
-    function decodeEOASignature(bytes calldata signature) external pure returns (bytes32 r, bytes32 s, uint8 v) {
-        return LibAuthenticatedHooks.decodeEOASignature(signature);
-    }
-}
+import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
+import {ForkedRpc} from "test/forked/ForkedRpc.sol";
 
 /// @dev Simple single owner smart wallet account that will verify signatures against
 ///      pre-approved and stored signatures for given hashes.
@@ -71,23 +41,31 @@ contract SmartWallet {
     }
 }
 
-contract BaseTest is Test {
+contract BaseForkedTest is Test {
+    // Nothing special about this block, it's the latest at the time of writing.
+    uint256 constant MAINNET_FORKED_BLOCK = 22947477;
+
     Vm.Wallet user;
     address userProxyAddr;
     COWShed userProxy;
-    COWShed cowshedImpl = new COWShed();
+    COWShed cowshedImpl;
     bytes32 baseName = "cowhooks.eth";
     bytes32 baseNode = vm.ensNamehash(LibString.fromSmallString(baseName));
 
     COWShedFactory factory;
-    LibAuthenticatedHooksCalldataProxy cproxy = new LibAuthenticatedHooksCalldataProxy();
+    LibAuthenticatedHooksCalldataProxy cproxy;
 
     address smartWalletAddr;
     SmartWallet smartWallet;
     address smartWalletProxyAddr;
     COWShed smartWalletProxy;
 
-    function setUp() external virtual {
+    function setUp() public virtual {
+        ForkedRpc.forkEthereumMainnetAtBlock(vm, MAINNET_FORKED_BLOCK);
+
+        cowshedImpl = new COWShed();
+        cproxy = new LibAuthenticatedHooksCalldataProxy();
+
         uint256 nonce = vm.getNonce(address(this));
         address factoryAddressExpected = vm.computeCreateAddress(address(this), nonce);
         _setOwnerForEns(baseNode, address(factoryAddressExpected));
