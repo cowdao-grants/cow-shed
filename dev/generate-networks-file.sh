@@ -22,6 +22,12 @@ done | jq --sort-keys --null-input 'reduce inputs as $item ({}; . *= $item)')
 
 # Merge with manual file if it exists
 if [[ -f "$manual_file" ]]; then
+  # Validate that the manual file contains valid JSON
+  if ! jq empty "$manual_file" 2>/dev/null; then
+    echo "Error: $manual_file is not valid JSON. Please fix or remove the file before proceeding." >&2
+    exit 1
+  fi
+  
   jq -s 'reduce .[] as $item ({}; . *= $item)' \
     <(echo "$generated") "$manual_file"
 else
