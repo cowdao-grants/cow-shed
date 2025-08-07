@@ -28,7 +28,7 @@ if [[ -f "$manual_file" ]]; then
     exit 1
   fi
   
-  jq -s 'reduce .[] as $item ({}; . *= $item)' \
+  jq --slurp --sort-keys 'reduce .[] as $item ({}; . *= $item)' \
     <(printf '%s' "$generated") "$manual_file"
 else
   printf '%s\n' "$generated"
