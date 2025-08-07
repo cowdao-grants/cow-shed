@@ -49,7 +49,7 @@ bytes32 constant sha3HexLookup = "0123456789abcdef";
  */
 function sha3HexAddress(address who) pure returns (bytes32 ret) {
     assembly {
-        for { let i := 40 } gt(i, 0) { } {
+        for { let i := 40 } gt(i, 0) {} {
             i := sub(i, 1)
             mstore8(i, byte(and(who, 0xf), sha3HexLookup))
             who := div(who, 0x10)

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import { LibAuthenticatedHooks, Call } from "src/LibAuthenticatedHooks.sol";
-import { Test } from "forge-std/Test.sol";
-import { LibAuthenticatedHooksCalldataProxy } from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
+import {Test} from "forge-std/Test.sol";
+import {Call} from "src/LibAuthenticatedHooks.sol";
+import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
 
 // mostly testing the eip712 encoding, hashing, etc.
 // it is differentially tested against the output of ethers' code for
@@ -14,7 +14,7 @@ contract LibAuthenticatedHooksTest is Test {
     function testExecuteHooksHash() external view {
         Call[] memory calls = new Call[](2);
         calls[0] =
-            Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false });
+            Call({target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false});
         calls[1] = Call({
             target: address(0),
             callData: hex"00112233",
@@ -35,7 +35,7 @@ contract LibAuthenticatedHooksTest is Test {
 
     function testCallHash() external view {
         Call memory call1 =
-            Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false });
+            Call({target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false});
         Call memory call2 = Call({
             target: address(0),
             callData: hex"00112233",
@@ -59,7 +59,7 @@ contract LibAuthenticatedHooksTest is Test {
     function testCallsHash() external view {
         Call[] memory calls = new Call[](2);
         calls[0] =
-            Call({ target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false });
+            Call({target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false});
         calls[1] = Call({
             target: address(0),
             callData: hex"00112233",
