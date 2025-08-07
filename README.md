@@ -141,7 +141,15 @@ After successfully deploying the contracts, a deployment file is automatically g
 
 The file [`networks.json`](./networks.json) lists all official deployments of the contracts in this repository by chain id.
 
-Update the file manually.
+This file is generated automatically using the broadcast files in the `broadcast/` directory.
+
+Most of the deployments are done using the `forge` script as described in this README, however, some networks might be deploy in some other way (like replaying the creation code and constructor arguments). For these, we will need to manually update the file `broadcast/networks-manual.json`.
+
+To regenerate the file after a new deployment, run the following command:
+
+```sh
+bash dev/generate-networks-file.sh > networks.json
+```
 
 #### 7. Update standard JSON input file, if needed
 
