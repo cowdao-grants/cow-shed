@@ -24,7 +24,7 @@ done | jq --sort-keys --null-input 'reduce inputs as $item ({}; . *= $item)')
 if [[ -f "$manual_file" ]]; then
   # Validate that the manual file contains valid JSON
   if ! jq empty "$manual_file" 2>/dev/null; then
-    echo "Error: $manual_file is not valid JSON. Please fix or remove the file before proceeding." >&2
+    echo "Error: $manual_file is not valid JSON." >&2
     exit 1
   fi
   
