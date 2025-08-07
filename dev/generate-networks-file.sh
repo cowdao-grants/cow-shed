@@ -3,7 +3,7 @@
 set -o errexit -o pipefail -o nounset
 
 repo_root_dir="$(git rev-parse --show-toplevel)"
-manual_file="$repo_root_dir/networks-manual.json"
+manual_file="$repo_root_dir/broadcast/networks-manual.json"
 
 # Generate JSON from broadcast deployment files
 generated=$(for deployment in "$repo_root_dir/broadcast/"*"/"*"/"*".json"; do
