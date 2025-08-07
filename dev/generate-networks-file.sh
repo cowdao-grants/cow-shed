@@ -29,7 +29,7 @@ if [[ -f "$manual_file" ]]; then
   fi
   
   jq -s 'reduce .[] as $item ({}; . *= $item)' \
-    <(echo "$generated") "$manual_file"
+    <(printf '%s' "$generated") "$manual_file"
 else
-  echo "$generated"
+  printf '%s\n' "$generated"
 fi
