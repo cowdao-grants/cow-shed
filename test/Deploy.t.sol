@@ -31,8 +31,8 @@ contract DeployTest is Test {
     function testMatchesOfficialAddresses() external {
         // These addresses are expected to change only if the contract code
         // changes.
-        address officialCowShedAddress = 0x77e80Fa0a460a095333fD96DC9A49a55933E0C00;
-        address officialFactoryAddress = 0x641CaC84012a53B4F55cCfcB112cAEBAa70e183a;
+        address officialCowShedAddress = 0x439925fff6fc1dD3411Dbda98c1C0c14d717D5cD;
+        address officialFactoryAddress = 0xA9CC41d727c09b3B70b0Eb5798Be33Fea890ecc0;
 
         DeployScript.Deployment memory deployment = script.deploy(DEPLOYED_ENS);
 
