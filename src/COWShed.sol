@@ -63,7 +63,12 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _executeCalls(calls, nonce);
     }
 
-    /// @notice Pre-signs (or revokes a pre-signature) for some hook.
+    /// @inheritdoc ICOWAuthHook
+    function executeHooksAdmin(Call[] calldata calls) external onlyAdmin {
+        LibAuthenticatedHooks.executeCalls(calls);
+    }
+
+    /// @notice Pre-signs (or revokes a pre-signature) for some hooks.
     /// After signing, the call to executePreSignedHooks will succeed (if done within the deadline).
     function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
         bytes32 hash = getPreSignHash(calls, nonce, deadline);
