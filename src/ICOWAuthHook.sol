@@ -19,6 +19,6 @@ interface ICOWAuthHook {
     function updateTrustedExecutor(address who) external;
     // @notice execute a set of pre-signed hooks.
     function executePreSignedHooks(Call[] calldata calls, uint256 deadline) external;
-    // @notice sign a set of pre-signed hooks.
+    // @notice on-chain sign a set of hooks for future execution.
     function signHooks(Call[] calldata calls, uint256 deadline, bool signed) external;
 }
