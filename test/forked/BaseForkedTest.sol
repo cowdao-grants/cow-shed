@@ -141,7 +141,7 @@ contract BaseForkedTest is Test {
         COWShed cowShed = COWShed(payable(proxy));
 
         vm.prank(_wallet.addr);
-        cowShed.preSignHook(calls, nonce, deadline, signed);
+        cowShed.preSignHooks(calls, nonce, deadline, signed);
     }
 
     function _signWithSmartWalletForProxy(
