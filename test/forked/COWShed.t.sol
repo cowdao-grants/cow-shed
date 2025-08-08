@@ -29,27 +29,29 @@ contract Stub {
 
 contract ForkedCOWShedTest is BaseForkedTest {
     Stub stub;
+    Call callWithValue;
+    Call callWillRevert;
 
     function setUp() public override {
         super.setUp();
         stub = new Stub();
+
+        callWithValue = Call({
+            target: address(stub),
+            value: 0.05 ether,
+            allowFailure: false,
+            callData: abi.encodeCall(stub.callWithValue, ()),
+            isDelegateCall: false
+        });
+
+        callWillRevert = Call({
+            target: address(stub),
+            value: 0,
+            allowFailure: true,
+            callData: abi.encodeCall(stub.willRevert, ()),
+            isDelegateCall: false
+        });
     }
-
-    Call callWithValue = Call({
-        target: address(stub),
-        value: 0.05 ether,
-        allowFailure: false,
-        callData: abi.encodeCall(stub.callWithValue, ()),
-        isDelegateCall: false
-    });
-
-    Call callWillRevert = Call({
-        target: address(stub),
-        value: 0,
-        allowFailure: true,
-        callData: abi.encodeCall(stub.willRevert, ()),
-        isDelegateCall: false
-    });
 
     function testExecuteHooks() external {
         // fund the proxy
@@ -58,14 +60,14 @@ contract ForkedCOWShedTest is BaseForkedTest {
         Call[] memory calls = new Call[](2);
         calls[0] = callWithValue;
         calls[1] = callWillRevert;
-        bytes32 nonce = "1";
 
+        bytes32 nonce = "1";
         bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
         vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
         factory.executeHooks(calls, nonce, _deadline(), user.addr, signature);
 
-        // same sig shouldnt work more than once
+        // same signature shouldn't work more than once
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
         factory.executeHooks(calls, nonce, _deadline(), user.addr, signature);
 
@@ -208,14 +210,15 @@ contract ForkedCOWShedTest is BaseForkedTest {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
+        bytes32 nonce = "1";
 
         // GIVEN: user has presigned a call to send 0.05 ether to the stub
-        _presignForProxy(calls, deadline, true, user);
+        _presignForProxy(calls, nonce, deadline, true, user);
 
         // WHEN: execute the pre-signed calls
         // THEN: the call is executed
         vm.expectCall(callWithValue.target, callWithValue.callData);
-        userProxy.executePreSignedHooks(calls, deadline);
+        userProxy.executePreSignedHooks(calls, nonce, deadline);
 
         // THEN: the proxy sent 0.05 ether to the stub
         assertEq(callWithValue.target.balance, 0.05 ether, "didn't send value as expected");
@@ -229,13 +232,14 @@ contract ForkedCOWShedTest is BaseForkedTest {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
+        bytes32 nonce = "1";
 
         // GIVEN: user has not presigned a call
 
         // WHEN: execute the pre-signed calls
         // THEN: the call should revert
-        vm.expectRevert(COWShed.NonceNotPreApproved.selector);
-        userProxy.executePreSignedHooks(calls, deadline);
+        vm.expectRevert(COWShed.HookNotPreSigned.selector);
+        userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 
     function testPreSignFlowRevoke() external {
@@ -245,16 +249,17 @@ contract ForkedCOWShedTest is BaseForkedTest {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
+        bytes32 nonce = "1";
 
         // GIVEN: user has presigned a call
-        _presignForProxy(calls, deadline, true, user);
+        _presignForProxy(calls, nonce, deadline, true, user);
 
         // GIVEN: the user revokes the presigned call
-        _presignForProxy(calls, deadline, false, user);
+        _presignForProxy(calls, nonce, deadline, false, user);
 
         // WHEN: execute the pre-signed calls
         // THEN: the call should revert
-        vm.expectRevert(COWShed.NonceNotPreApproved.selector);
-        userProxy.executePreSignedHooks(calls, deadline);
+        vm.expectRevert(COWShed.HookNotPreSigned.selector);
+        userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 }

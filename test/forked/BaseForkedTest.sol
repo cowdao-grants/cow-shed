@@ -130,12 +130,18 @@ contract BaseForkedTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
-    function _presignForProxy(Call[] memory calls, uint256 deadline, bool signed, Vm.Wallet memory _wallet) internal {
+    function _presignForProxy(
+        Call[] memory calls,
+        bytes32 nonce,
+        uint256 deadline,
+        bool signed,
+        Vm.Wallet memory _wallet
+    ) internal {
         address proxy = factory.proxyOf(_wallet.addr);
         COWShed cowShed = COWShed(payable(proxy));
 
         vm.prank(_wallet.addr);
-        cowShed.signHooks(calls, deadline, signed);
+        cowShed.presignHook(calls, nonce, deadline, signed);
     }
 
     function _signWithSmartWalletForProxy(
