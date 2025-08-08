@@ -22,6 +22,13 @@ library LibAuthenticatedHooks {
     /// @dev magic value that is returned on successful validation of a signature from a EIP1271 smart account.
     bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
 
+    /// @dev verifies that the deadline has not elapsed
+    function verifyDeadline(uint256 deadline) internal view {
+        if (block.timestamp > deadline) {
+            revert DeadlineElapsed();
+        }
+    }
+
     /// @dev verifies the deadline of the message and the signature against the executing payload.
     function authenticateHooks(
         Call[] calldata calls,
@@ -31,9 +38,7 @@ library LibAuthenticatedHooks {
         bytes calldata signature,
         bytes32 domainSeparator
     ) internal view returns (bool) {
-        if (block.timestamp > deadline) {
-            revert DeadlineElapsed();
-        }
+        verifyDeadline(deadline);
         bytes32 toSign = hashToSign(calls, nonce, deadline, domainSeparator);
 
         // smart contract signer
