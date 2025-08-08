@@ -13,7 +13,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     error AlreadyInitialized();
     error OnlyAdmin();
     error OnlyAdminOrTrustedExecutorOrSelf();
-    error HookNotPreSigned();
+    error NotPreSigned();
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
@@ -84,7 +84,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         bytes32 hash = getPreSignHash(calls, nonce, deadline);
 
         if (!_isPreSigned(hash)) {
-            revert HookNotPreSigned();
+            revert NotPreSigned();
         }
 
         _executeCalls(calls, nonce);

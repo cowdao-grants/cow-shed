@@ -325,7 +325,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: pre-sign the hook
         // THEN: the call should revert
-        vm.expectRevert(COWShed.HookNotPreSigned.selector);
+        vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 
@@ -346,7 +346,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: execute the pre-signed hook
         // THEN: the call should revert
-        vm.expectRevert(COWShed.HookNotPreSigned.selector);
+        vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 
@@ -366,7 +366,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: execute the pre-signed hook
         // THEN: the call should revert
-        vm.expectRevert(COWShed.HookNotPreSigned.selector);
+        vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 
