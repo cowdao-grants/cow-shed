@@ -143,7 +143,7 @@ The file [`networks.json`](./networks.json) lists all official deployments of th
 
 This file is generated automatically using the broadcast files in the `broadcast/` directory.
 
-Most of the deployments are done using the `forge` script as described in this README, however, some networks might be deploy in some other way (like replaying the creation code and constructor arguments). For these, we will need to manually update the file `broadcast/networks-manual.json`.
+Most of the deployments are done using the `forge` script as described in this README, however, some networks might be deployed in some other way (like replaying the creation code and constructor arguments). For these, we will need to manually update the file `broadcast/networks-manual.json`.
 
 To regenerate the file after a new deployment, run the following command:
 
