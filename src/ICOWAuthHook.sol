@@ -20,5 +20,7 @@ interface ICOWAuthHook {
     // @notice execute a set of pre-signed hooks.
     function executePreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external;
     // @notice on-chain sign a set of hooks for future execution.
-    function presignHook(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external;
+    function preSignHook(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external;
+    // @notice check if a hook is pre-signed.
+    function isPreSignedHook(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool);
 }

@@ -65,9 +65,16 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     /// @notice Pre-signs (or revokes a pre-signature) for some hook.
     /// After signing, the call to executePreSignedHooks will succeed (if done within the deadline).
-    function presignHook(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
+    function preSignHook(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
         bytes32 hash = getPreSignHash(calls, nonce, deadline);
         _preSign(hash, signed);
+    }
+
+    /// @notice Check if a hook has been pre-signed
+    /// If signed, a call to executePreSignedHooks will succeed, otherwise, not
+    function isPreSignedHook(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
+        bytes32 hash = getPreSignHash(calls, nonce, deadline);
+        return _isPreSigned(hash);
     }
 
     /// @notice execute a set of pre-signed hooks.
@@ -149,7 +156,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     }
 
     /// @dev Get the hash used for pre-signing a set of calls.
-    /// This is the standard hash convention used for pre-signing: the hash is a hash of the calls, nonce, and deadline.
+    /// This is the standard hash convention used for pre-signing: the hash is a hash of the calls, nonce, and nonce.
     /// Other flows can use this or any other method to generate a hash.
     function getPreSignHash(Call[] calldata calls, bytes32 nonce, uint256 deadline) public pure returns (bytes32) {
         return keccak256(abi.encode(calls, nonce, deadline));
