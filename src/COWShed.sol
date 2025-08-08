@@ -13,7 +13,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     error AlreadyInitialized();
     error OnlyAdmin();
     error OnlyAdminOrTrustedExecutorOrSelf();
-    error NonceNotPreApproved();
+    error HookNotPreSigned();
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
@@ -63,21 +63,21 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _executeCalls(calls, nonce);
     }
 
-    /// @notice Pre-signs (or revokes a pre-signature) for some hooks.
+    /// @notice Pre-signs (or revokes a pre-signature) for some hook.
     /// After signing, the call to executePreSignedHooks will succeed (if done within the deadline).
-    function signHooks(Call[] calldata calls, uint256 deadline, bool signed) external onlyAdmin {
-        bytes32 nonce = getNonce(calls, deadline);
-        _signNonce(nonce, signed);
+    function presignHook(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
+        bytes32 hash = getPreSignHash(calls, nonce, deadline);
+        _preSign(hash, signed);
     }
 
     /// @notice execute a set of pre-signed hooks.
-    function executePreSignedHooks(Call[] calldata calls, uint256 deadline) external {
+    function executePreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external {
         LibAuthenticatedHooks.verifyDeadline(deadline);
 
-        bytes32 nonce = getNonce(calls, deadline);
+        bytes32 hash = getPreSignHash(calls, nonce, deadline);
 
-        if (!_isPreApprovedNonce(nonce)) {
-            revert NonceNotPreApproved();
+        if (!_isPreSigned(hash)) {
+            revert HookNotPreSigned();
         }
 
         _executeCalls(calls, nonce);
@@ -148,10 +148,10 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         LibAuthenticatedHooks.executeCalls(calls);
     }
 
-    /// @dev Returns the nonce based on the calls and deadline.
-    /// This is the standard nonce convention used for pre-signing: the nonce is a hash of the calls and deadline.
-    /// Other flows can use this or any other method to generate a nonce.
-    function getNonce(Call[] calldata calls, uint256 deadline) public pure returns (bytes32) {
-        return keccak256(abi.encode(calls, deadline));
+    /// @dev Get the hash used for pre-signing a set of calls.
+    /// This is the standard hash convention used for pre-signing: the hash is a hash of the calls, nonce, and deadline.
+    /// Other flows can use this or any other method to generate a hash.
+    function getPreSignHash(Call[] calldata calls, bytes32 nonce, uint256 deadline) public pure returns (bytes32) {
+        return keccak256(abi.encode(calls, nonce, deadline));
     }
 }
