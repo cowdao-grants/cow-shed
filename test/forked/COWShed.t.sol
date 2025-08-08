@@ -202,7 +202,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
     }
 
     function testPreSignFlowSuccess() external {
-        // GIVEN: user has 1 ether
+        // GIVEN: shed has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 
         Call[] memory calls = new Call[](1);
