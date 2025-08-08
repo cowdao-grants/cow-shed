@@ -65,14 +65,14 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     /// @notice Pre-signs (or revokes a pre-signature) for some hook.
     /// After signing, the call to executePreSignedHooks will succeed (if done within the deadline).
-    function preSignHook(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
+    function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
         bytes32 hash = getPreSignHash(calls, nonce, deadline);
         _preSign(hash, signed);
     }
 
     /// @notice Check if a hook has been pre-signed
     /// If signed, a call to executePreSignedHooks will succeed, otherwise, not
-    function isPreSignedHook(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
+    function isPreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
         bytes32 hash = getPreSignHash(calls, nonce, deadline);
         return _isPreSigned(hash);
     }

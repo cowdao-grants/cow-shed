@@ -214,7 +214,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: check if the hook is pre-signed
         // THEN: the hook is pre-signed
-        assertTrue(userProxy.isPreSignedHook(calls, nonce, deadline), "hook is not pre-signed");
+        assertTrue(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is not pre-signed");
     }
 
     function testIsPreSignedHookUnsigned() external view {
@@ -226,7 +226,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
         // GIVEN: user has not pre-signed a hook
         // WHEN: check if the hook is pre-signed
         // THEN: the hook is not pre-signed
-        assertFalse(userProxy.isPreSignedHook(calls, nonce, deadline), "hook is pre-signed");
+        assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
     }
 
     function testIsPreSignedHookRevoked() external {
@@ -241,7 +241,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: check if the hook is pre-signed
         // THEN: the hook is not pre-signed
-        assertFalse(userProxy.isPreSignedHook(calls, nonce, deadline), "hook is pre-signed");
+        assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
     }
 
     function testIsPreUnsignedForDifferentNonce() external {
@@ -256,7 +256,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: check if the hook is pre-signed if we change the nonce
         // THEN: the hook is not pre-signed
-        assertFalse(userProxy.isPreSignedHook(calls, nonce2, deadline), "hook is pre-signed");
+        assertFalse(userProxy.isPreSignedHooks(calls, nonce2, deadline), "hook is pre-signed");
     }
 
     function testIsPreUnsignedForDifferentDeadline() external {
@@ -270,7 +270,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: check if the hook is pre-signed if we change the deadline
         // THEN: the hook is not pre-signed
-        assertFalse(userProxy.isPreSignedHook(calls, nonce, deadline + 1), "hook is pre-signed");
+        assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline + 1), "hook is pre-signed");
     }
 
     function testIsPreUnsignedForDifferentCalls() external {
@@ -287,7 +287,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: check if the hook is pre-signed if we change the calls
         // THEN: the hook is not pre-signed
-        assertFalse(userProxy.isPreSignedHook(calls2, nonce, deadline), "hook is pre-signed");
+        assertFalse(userProxy.isPreSignedHooks(calls2, nonce, deadline), "hook is pre-signed");
     }
 
     function testPreSignFlowSuccess() external {
