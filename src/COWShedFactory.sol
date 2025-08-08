@@ -87,8 +87,7 @@ contract COWShedFactory is COWShedResolver {
         // unfortunately cannot cache the init hash since we use a constructor, which we need to use
         // to have an immutable admin variable in proxy, which is optimal for gas vs using a storage
         // variable in proxy.
-        bytes32 initCodeHash =
-            keccak256(abi.encodePacked(PROXY_CREATION_CODE, abi.encode(implementation, who)));
+        bytes32 initCodeHash = keccak256(abi.encodePacked(PROXY_CREATION_CODE, abi.encode(implementation, who)));
         return address(
             uint160(
                 uint256(

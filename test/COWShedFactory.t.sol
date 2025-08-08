@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 import {Test} from "forge-std/Test.sol";
 
 import {DeployScript} from "script/Deploy.s.sol";
-import {COWShedFactory, COWShed, COWShedProxy} from "src/COWShedFactory.sol";
+import {COWShed, COWShedFactory, COWShedProxy} from "src/COWShedFactory.sol";
 
 contract COWShedFactoryTest is Test {
     string constant baseEns = "testcowhooks.eth";
