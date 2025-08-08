@@ -17,6 +17,10 @@ contract COWShedFactory is COWShedResolver {
     /// @notice the cowshed proxy implementation address.
     address public immutable implementation;
 
+    /// @notice the deployment bytecode of a proxy as generated at compile
+    /// time.
+    bytes public constant PROXY_CREATION_CODE = type(COWShedProxy).creationCode;
+
     /// @notice mapping of proxy address to owner address.
     mapping(address => address) public ownerOf;
 
@@ -83,8 +87,7 @@ contract COWShedFactory is COWShedResolver {
         // unfortunately cannot cache the init hash since we use a constructor, which we need to use
         // to have an immutable admin variable in proxy, which is optimal for gas vs using a storage
         // variable in proxy.
-        bytes32 initCodeHash =
-            keccak256(abi.encodePacked(type(COWShedProxy).creationCode, abi.encode(implementation, who)));
+        bytes32 initCodeHash = keccak256(abi.encodePacked(PROXY_CREATION_CODE, abi.encode(implementation, who)));
         return address(
             uint160(
                 uint256(
