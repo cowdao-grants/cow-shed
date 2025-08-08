@@ -348,4 +348,24 @@ contract ForkedCOWShedTest is BaseForkedTest {
         vm.expectRevert(COWShed.HookNotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
+
+    function testPreSignFlowRevokeUnsigned() external {
+        // GIVEN: user has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+        bytes32 nonce = "1";
+
+        // GIVEN: user has not presigned a call
+
+        // GIVEN: the user revokes the presigned call
+        _presignForProxy(calls, nonce, deadline, false, user);
+
+        // WHEN: execute the pre-signed calls
+        // THEN: the call should revert
+        vm.expectRevert(COWShed.HookNotPreSigned.selector);
+        userProxy.executePreSignedHooks(calls, nonce, deadline);
+    }
 }
