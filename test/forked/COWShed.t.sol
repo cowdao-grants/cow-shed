@@ -203,6 +203,92 @@ contract ForkedCOWShedTest is BaseForkedTest {
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
     }
 
+    function testIsPreSignedHook() external {
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+        bytes32 nonce = "1";
+
+        // GIVEN: user has presigned a call
+        _presignForProxy(calls, nonce, deadline, true, user);
+
+        // WHEN: check if the hook is pre-signed
+        // THEN: the hook is pre-signed
+        assertTrue(userProxy.isPreSignedHook(calls, nonce, deadline), "hook is not pre-signed");
+    }
+
+    function testIsPreSignedHookUnsigned() external {
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+        bytes32 nonce = "1";
+
+        // GIVEN: user has not presigned a call
+        // WHEN: check if the hook is pre-signed
+        assertFalse(userProxy.isPreSignedHook(calls, nonce, deadline), "hook is pre-signed");
+    }
+
+    function testIsPreSignedHookRevoked() external {
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+        bytes32 nonce = "1";
+
+        // GIVEN: user had a hook signed, and then revoked it
+        _presignForProxy(calls, nonce, deadline, true, user);
+        _presignForProxy(calls, nonce, deadline, false, user);
+
+        // WHEN: check if the hook is pre-signed
+        // THEN: the hook is not pre-signed
+        assertFalse(userProxy.isPreSignedHook(calls, nonce, deadline), "hook is pre-signed");
+    }
+
+    function testIsPreUnsignedForDifferentNonce() external {
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+        bytes32 nonce1 = "1";
+        bytes32 nonce2 = "2";
+
+        // GIVEN: user has presigned the hook
+        _presignForProxy(calls, nonce1, deadline, true, user);
+
+        // WHEN: check if the hook is pre-signed if we change the nonce
+        // THEN: the hook is not pre-signed
+        assertFalse(userProxy.isPreSignedHook(calls, nonce2, deadline), "hook is pre-signed");
+    }
+
+    function testIsPreUnsignedForDifferentDeadline() external {
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+        bytes32 nonce = "1";
+
+        // GIVEN: user has presigned the hook
+        _presignForProxy(calls, nonce, deadline, true, user);
+
+        // WHEN: check if the hook is pre-signed if we change the deadline
+        // THEN: the hook is not pre-signed
+        assertFalse(userProxy.isPreSignedHook(calls, nonce, deadline + 1), "hook is pre-signed");
+    }
+
+    function testIsPreUnsignedForDifferentCalls() external {
+        Call[] memory calls1 = new Call[](1);
+        calls1[0] = callWithValue;
+
+        Call[] memory calls2 = new Call[](1);
+        calls2[0] = callWillRevert;
+        uint256 deadline = _deadline();
+        bytes32 nonce = "1";
+
+        // GIVEN: user has presigned the hook
+        _presignForProxy(calls1, nonce, deadline, true, user);
+
+        // WHEN: check if the hook is pre-signed if we change the calls
+        // THEN: the hook is not pre-signed
+        assertFalse(userProxy.isPreSignedHook(calls2, nonce, deadline), "hook is pre-signed");
+    }
+
     function testPreSignFlowSuccess() external {
         // GIVEN: shed has 1 ether
         vm.deal(userProxyAddr, 1 ether);
