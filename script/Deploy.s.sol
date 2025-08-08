@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 import {Script} from "forge-std/Script.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
-import {COWShedFactory, COWShed} from "src/COWShedFactory.sol";
+import {COWShed, COWShedFactory} from "src/COWShedFactory.sol";
 
 bytes32 constant SALT = bytes32(0);
 
