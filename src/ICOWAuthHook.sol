@@ -13,7 +13,7 @@ interface ICOWAuthHook {
     // @notice execute given calls after authenticating the signature,
     //         verifying nonce isnt reused and that the deadline hasn't passed.
     function executeHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bytes calldata signature) external;
-    // @notice Allows the admin to execute given calls without a signature.
+    // @notice allows the admin to execute arbitrary calls.
     function executeHooksAdmin(Call[] calldata calls) external;
     // @notice execute arbitrary calls, only callable by the trusted executor.
     function trustedExecuteHooks(Call[] calldata calls) external;
