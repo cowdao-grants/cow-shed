@@ -214,12 +214,12 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: execute the pre-signed calls
         // THEN: the call is executed
-        vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
+        vm.expectCall(callWithValue.target, callWithValue.callData);
         userProxy.executePreSignedHooks(calls, deadline);
 
         // THEN: the proxy sent 0.05 ether to the stub
-        assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
-        assertEq(address(userProxy).balance, 0.95 ether, "didnt send value as expected");
+        assertEq(callWithValue.target.balance, 0.05 ether, "didn't send value as expected");
+        assertEq(address(userProxy).balance, 0.95 ether, "didn't send value as expected");
     }
 
     function testPreSignFlowUnsigned() external {
