@@ -210,7 +210,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
     }
 
     function testExecuteHooksAdminSuccess() external {
-        // GIVEN: user has 1 ether
+        // GIVEN: shed has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 
         Call[] memory calls = new Call[](1);
@@ -228,7 +228,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
     }
 
     function testExecuteHooksAdminError() external {
-        // GIVEN: user has 1 ether
+        // GIVEN: shed has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 
         Call[] memory calls = new Call[](1);
