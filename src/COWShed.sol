@@ -107,6 +107,13 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         REVERSE_REGISTRAR.claimWithResolver(resolver, resolver);
     }
 
+    /// @notice Set the presign storage contract. This enables the presign functionality.
+    ///         Only the admin can call this function.
+    /// @param storageContract Address of the PreSignStateStorage contract, or address(0) to disable
+    function setPreSignStorage(address storageContract) external onlyAdmin {
+        _setPreSignStorage(storageContract);
+    }
+
     /// @inheritdoc ICOWAuthHook
     function updateTrustedExecutor(address who) external {
         if (msg.sender != address(this)) {
@@ -148,6 +155,11 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @notice trusted executor that can execute arbitrary calls without signature verifications.
     function trustedExecutor() external view returns (address) {
         return _state().trustedExecutor;
+    }
+
+    /// @notice Get the address of the presign storage contract
+    function preSignStorage() external view returns (address) {
+        return _getPreSignStorage();
     }
 
     function _executeCalls(Call[] calldata calls, bytes32 nonce) internal {

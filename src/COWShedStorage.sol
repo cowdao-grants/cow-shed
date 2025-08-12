@@ -10,16 +10,22 @@ interface IAdminView {
     function admin() external view returns (address);
 }
 
+interface IPreSignStateStorage {
+    function setPreSigned(bytes32 hash, bool signed) external;
+    function isPreSigned(bytes32 hash) external view returns (bool);
+}
+
 contract COWShedStorage {
     using LibBitmap for LibBitmap.Bitmap;
 
     error NonceAlreadyUsed();
+    error PreSignStorageNotSet();
 
     struct State {
         bool initialized;
         address trustedExecutor;
-        LibBitmap.Bitmap nonces;
-        mapping(bytes32 => bool) presignedHashes;
+        address preSignStorage; // Address of PreSignStateStorage contract, 0x0 if disabled
+        LibBitmap.Bitmap nonces; // Local nonces for backward compatibility
     }
 
     bytes32 internal constant STATE_STORAGE_SLOT = keccak256("COWShed.State");
@@ -45,10 +51,26 @@ contract COWShedStorage {
     }
 
     function _preSign(bytes32 _hash, bool _signed) internal {
-        _state().presignedHashes[_hash] = _signed;
+        address storageContract = _state().preSignStorage;
+        if (storageContract == address(0)) {
+            revert PreSignStorageNotSet();
+        }
+        IPreSignStateStorage(storageContract).setPreSigned(_hash, _signed);
     }
 
     function _isPreSigned(bytes32 _hash) internal view returns (bool) {
-        return _state().presignedHashes[_hash];
+        address storageContract = _state().preSignStorage;
+        if (storageContract == address(0)) {
+            return false; // If no storage contract, nothing is presigned
+        }
+        return IPreSignStateStorage(storageContract).isPreSigned(_hash);
+    }
+
+    function _setPreSignStorage(address _storage) internal {
+        _state().preSignStorage = _storage;
+    }
+
+    function _getPreSignStorage() internal view returns (address) {
+        return _state().preSignStorage;
     }
 }
