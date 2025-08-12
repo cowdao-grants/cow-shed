@@ -132,7 +132,7 @@ library LibAuthenticatedHooks {
             // something to be expected when using Solidity, see warning at:
             // https://docs.soliditylang.org/en/v0.8.30/internals/layout_in_memory.html
             // This means that this memory will be reused to hash the next call
-            // rather than having new memory allocated for ach new call.
+            // rather than having new memory allocated for each new call.
             calldatacopy(freeMemoryPointer, callData.offset, callDataLength)
             let callDataHash := keccak256(freeMemoryPointer, callDataLength)
 
