@@ -187,6 +187,39 @@ contract ForkedCOWShedTest is BaseForkedTest {
         assertTrue(COWShed(payable(userProxy)).trustedExecutor() == addr, "should be a trusted executor");
     }
 
+    function testTrustedExecuteHooksAdminSuccess() external {
+        // GIVEN: shed has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+
+        // WHEN: the admin executes a call
+        // THEN: the call is executed
+        vm.expectCall(callWithValue.target, callWithValue.callData);
+        vm.prank(user.addr);
+        userProxy.trustedExecuteHooks(calls);
+
+        // THEN: the proxy sent 0.05 ether to the stub
+        assertEq(callWithValue.target.balance, 0.05 ether, "didnt send value as expected");
+        assertEq(address(userProxy).balance, 0.95 ether, "didnt send value as expected");
+    }
+
+    function testTrustedExecuteHooksAdminError() external {
+        // GIVEN: shed has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+
+        // WHEN: someone else than the admin executes a call
+        // THEN: the call should revert
+        vm.expectRevert(COWShed.OnlyTrustedRole.selector);
+        address notAdmin = makeAddr("notAdmin");
+        vm.prank(notAdmin);
+        userProxy.trustedExecuteHooks(calls);
+    }
+
     function testUpdateImplementation() external {
         vm.prank(user.addr);
         userProxy.updateImplementation(address(stub));
@@ -225,38 +258,5 @@ contract ForkedCOWShedTest is BaseForkedTest {
         smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
 
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
-    }
-
-    function testExecuteHooksAdminSuccess() external {
-        // GIVEN: shed has 1 ether
-        vm.deal(userProxyAddr, 1 ether);
-
-        Call[] memory calls = new Call[](1);
-        calls[0] = callWithValue;
-
-        // WHEN: the admin executes a call
-        // THEN: the call is executed
-        vm.expectCall(callWithValue.target, callWithValue.callData);
-        vm.prank(user.addr);
-        userProxy.executeHooksAdmin(calls);
-
-        // THEN: the proxy sent 0.05 ether to the stub
-        assertEq(callWithValue.target.balance, 0.05 ether, "didnt send value as expected");
-        assertEq(address(userProxy).balance, 0.95 ether, "didnt send value as expected");
-    }
-
-    function testExecuteHooksAdminError() external {
-        // GIVEN: shed has 1 ether
-        vm.deal(userProxyAddr, 1 ether);
-
-        Call[] memory calls = new Call[](1);
-        calls[0] = callWithValue;
-
-        // WHEN: someone else than the admin executes a call
-        // THEN: the call should revert
-        vm.expectRevert(COWShed.OnlyAdmin.selector);
-        address notAdmin = makeAddr("notAdmin");
-        vm.prank(notAdmin);
-        userProxy.executeHooksAdmin(calls);
     }
 }

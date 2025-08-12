@@ -8,7 +8,7 @@ import {REVERSE_REGISTRAR} from "./ens.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
-    error OnlyTrustedExecutor();
+    error OnlyTrustedRole();
     error OnlySelf();
     error AlreadyInitialized();
     error OnlyAdmin();
@@ -22,13 +22,15 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     bytes32 internal constant domainTypeHash =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
-    modifier onlyTrustedExecutor() {
-        if (msg.sender != _state().trustedExecutor) {
-            revert OnlyTrustedExecutor();
+    /// @notice only the admin or the trusted executor can call this function.
+    modifier onlyTrustedRole() {
+        if (msg.sender != _admin() && msg.sender != _state().trustedExecutor) {
+            revert OnlyTrustedRole();
         }
         _;
     }
 
+    /// @notice only the admin can call this function.
     modifier onlyAdmin() {
         if (msg.sender != _admin()) {
             revert OnlyAdmin();
@@ -62,14 +64,9 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _executeCalls(calls, nonce);
     }
 
-    /// @inheritdoc ICOWAuthHook
-    function executeHooksAdmin(Call[] calldata calls) external onlyAdmin {
-        LibAuthenticatedHooks.executeCalls(calls);
-    }
-
     /// @custom:todo doesn't make sense to commit some other contract's sigs nonce here.
     /// @inheritdoc ICOWAuthHook
-    function trustedExecuteHooks(Call[] calldata calls) external onlyTrustedExecutor {
+    function trustedExecuteHooks(Call[] calldata calls) external onlyTrustedRole {
         LibAuthenticatedHooks.executeCalls(calls);
     }
 
