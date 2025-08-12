@@ -116,7 +116,8 @@ library LibAuthenticatedHooks {
     function callHash(Call calldata cll) internal pure returns (bytes32 _callHash) {
         address target = cll.target;
         uint256 value = cll.value;
-        bytes32 callDataHash = keccak256(cll.callData);
+        bytes calldata callData = cll.callData;
+        uint256 callDataLength = callData.length;
         bool allowFailure = cll.allowFailure;
         bool isDelegateCall = cll.isDelegateCall;
         bytes32 callTypeHash = CALL_TYPE_HASH;
@@ -125,6 +126,15 @@ library LibAuthenticatedHooks {
             let freeMemoryPointer := mload(0x40)
             let firstSlot := mload(0x80)
             let secondSlot := mload(0xa0)
+
+            // Write after the free memory pointer but don't clear its content.
+            // This means that unused memory will be dirty, but this is already
+            // something to be expected when using Solidity, see warning at:
+            // https://docs.soliditylang.org/en/v0.8.30/internals/layout_in_memory.html
+            // This means that this memory will be reused to hash the next call
+            // rather than having new memory allocated for each new call.
+            calldatacopy(freeMemoryPointer, callData.offset, callDataLength)
+            let callDataHash := keccak256(freeMemoryPointer, callDataLength)
 
             mstore(0x00, callTypeHash)
             mstore(0x20, target)
