@@ -65,13 +65,13 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     /// @inheritdoc ICOWAuthHook
     function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
-        bytes32 hash = getPreSignHash(calls, nonce, deadline);
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
         _preSign(hash, signed);
     }
 
     /// @inheritdoc ICOWAuthHook
     function isPreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
-        bytes32 hash = getPreSignHash(calls, nonce, deadline);
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
         return _isPreSigned(hash);
     }
 
@@ -79,7 +79,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     function executePreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external {
         LibAuthenticatedHooks.verifyDeadline(deadline);
 
-        bytes32 hash = getPreSignHash(calls, nonce, deadline);
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
 
         if (!_isPreSigned(hash)) {
             revert NotPreSigned();
@@ -151,12 +151,5 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     function _executeCalls(Call[] calldata calls, bytes32 nonce) internal {
         _useNonce(nonce);
         LibAuthenticatedHooks.executeCalls(calls);
-    }
-
-    /// @dev Get the hash used for pre-signing a set of calls.
-    /// This is the standard hash convention used for pre-signing: the hash is a hash of the calls, nonce, and nonce.
-    /// Other flows can use this or any other method to generate a hash.
-    function getPreSignHash(Call[] calldata calls, bytes32 nonce, uint256 deadline) public pure returns (bytes32) {
-        return keccak256(abi.encode(calls, nonce, deadline));
     }
 }
