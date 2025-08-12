@@ -218,12 +218,12 @@ contract ForkedCOWShedTest is BaseForkedTest {
 
         // WHEN: the admin executes a call
         // THEN: the call is executed
-        vm.expectCall(address(stub), abi.encodeCall(stub.callWithValue, ()));
+        vm.expectCall(callWithValue.target, callWithValue.callData);
         vm.prank(user.addr);
         userProxy.executeHooksAdmin(calls);
 
         // THEN: the proxy sent 0.05 ether to the stub
-        assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
+        assertEq(callWithValue.target.balance, 0.05 ether, "didnt send value as expected");
         assertEq(address(userProxy).balance, 0.95 ether, "didnt send value as expected");
     }
 
