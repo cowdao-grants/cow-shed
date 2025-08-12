@@ -259,6 +259,21 @@ contract ForkedCOWShedTest is BaseForkedTest {
         assertFalse(userProxy.isPreSignedHooks(calls, nonce2, deadline), "hook is pre-signed");
     }
 
+    function testIsPreSignedRevokeUnsigned() external {
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+        bytes32 nonce = "1";
+
+        // GIVEN: user has not pre-signed the hook
+        // GIVEN: the user revokes the pre-signed hook
+        _presignForProxy(calls, nonce, deadline, false, user);
+
+        // WHEN: check if the hook is pre-signed
+        // THEN: the hook is not pre-signed
+        assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
+    }
+
     function testIsPreUnsignedForDifferentDeadline() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
