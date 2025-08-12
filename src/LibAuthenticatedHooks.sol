@@ -22,7 +22,7 @@ library LibAuthenticatedHooks {
     /// @dev magic value that is returned on successful validation of a signature from a EIP1271 smart account.
     bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
 
-    /// @dev verifies that the deadline has not elapsed
+    /// @dev reverts if the deadline has elapsed
     function verifyDeadline(uint256 deadline) internal view {
         if (block.timestamp > deadline) {
             revert DeadlineElapsed();
