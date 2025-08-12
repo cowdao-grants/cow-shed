@@ -299,7 +299,7 @@ contract ForkedCOWShedTest is BaseForkedTest {
         uint256 deadline = _deadline();
         bytes32 nonce = "1";
 
-        // GIVEN: user has pre-signed hook to send 0.05 ether to the stub
+        // GIVEN: user has pre-signed hook to send ether to the stub
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // WHEN: execute the pre-signed hook
@@ -307,9 +307,9 @@ contract ForkedCOWShedTest is BaseForkedTest {
         vm.expectCall(callWithValue.target, callWithValue.callData);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
 
-        // THEN: the proxy sent 0.05 ether to the stub
-        assertEq(callWithValue.target.balance, 0.05 ether, "didn't send value as expected");
-        assertEq(address(userProxy).balance, 0.95 ether, "didn't send value as expected");
+        // THEN: the proxy sent ether to the stub
+        assertEq(callWithValue.target.balance, callWithValue.value, "didn't send value as expected");
+        assertEq(address(userProxy).balance, 1 ether - callWithValue.value, "didn't send value as expected");
     }
 
     function testPreSignFlowUnsigned() external {
