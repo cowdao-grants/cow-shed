@@ -33,12 +33,22 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         });
     }
 
-    function preSignStorage_uninitializeReturnZero() external view {
+    function testPreSignStorage_uninitializeReturnZero() external view {
         // GIVEN: user never set the pre-sign storage
 
         // WHEN: checking the pre-sign storage
         // THEN: returns the zero-address
         assertEq(userProxy.preSignStorage(), address(0));
+    }
+
+    function testPreSignStorage_initializedReturnValue() external {
+        // GIVEN: user initialized the storage
+        address storageAddress = makeAddr("mockStorage");
+        _setPreSignStorage(storageAddress, user);
+
+        // WHEN: checking the pre-sign storage
+        // THEN: returns the address we set
+        assertEq(userProxy.preSignStorage(), storageAddress);
     }
 
     function testPreSignStorageNotSet_isPreSignedHooksReturnsFalse() external view {
