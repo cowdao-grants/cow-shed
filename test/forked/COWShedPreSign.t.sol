@@ -51,20 +51,54 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertEq(userProxy.preSignStorage(), storageAddress);
     }
 
-    function testPreSignStorageNotSet_isPreSignedHooksReturnsFalse() external view {
-        Call[] memory calls = new Call[](1);
-        calls[0] = callWithValue;
-        uint256 deadline = _deadline();
-        bytes32 nonce = "1";
+    function testPreSignStorage_replacedAddressReturnsValue() external {
+        // GIVEN: user initialized the storage
+        address storageAddress1 = makeAddr("storageAddress1");
+        _setPreSignStorage(storageAddress1, user);
 
-        // GIVEN: user never set the pre-sign storage
+        // GIVEN: user replaces it to a new storage
+        address storageAddress2 = makeAddr("storageAddress2");
+        _setPreSignStorage(storageAddress2, user);
 
-        // WHEN: check if the hook is pre-signed
-        // THEN: returns false
-        assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is not pre-signed");
+        // WHEN: checking the pre-sign storage
+        // THEN: returns the latest storage the user set
+        assertEq(userProxy.preSignStorage(), storageAddress2);
     }
 
-    function testPreSignStorageNotSet_preSignReverts() external {
+    function testSetPreSignStorage_setZeroAddress() external {
+        // GIVEN: user never set the pre-sign storage
+
+        // WHEN: setting the pre-sign storage to zero
+        userProxy.setPreSignStorage(address(0));
+
+        // THEN: returns the zero-address
+        assertEq(userProxy.preSignStorage(), address(0));
+    }
+
+    function testSetPreSignStorage_setNonZeroAddress() external {
+        // GIVEN: user never set the pre-sign storage
+
+        // WHEN: setting the pre-sign storage to zero
+        address storageAddress = makeAddr("storageAddress");
+        userProxy.setPreSignStorage(storageAddress);
+
+        // THEN: returns the storageAddress
+        assertEq(userProxy.preSignStorage(), storageAddress);
+    }
+
+    function testSetPreSignStorage_setNonZeroAddress() external {
+        // GIVEN: user had set the pre-sign storage
+        address storageAddress = makeAddr("storageAddress");
+        _setPreSignStorage(storageAddress, user);
+
+        // WHEN: setting the pre-sign storage to zero
+        userProxy.setPreSignStorage(address(0));
+
+        // THEN: returns the zero-address
+        assertEq(userProxy.preSignStorage(), address(0));
+    }
+
+    function testPreSignHooks_storageNotSet_presign() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -79,7 +113,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         userProxy.preSignHooks(calls, nonce, deadline, true);
     }
 
-    function testPreSignStorageNotSet_revokePreSignReverts() external {
+    function testPreSignHooks_storageNotSet_revoke() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -94,7 +128,33 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         userProxy.preSignHooks(calls, nonce, deadline, false);
     }
 
-    function testIsPreSignedHook() external {
+    function testSetPreSignStorage_replaceAddress() external {
+        // GIVEN: user had set the pre-sign storage
+        address storageAddressOld = makeAddr("storageAddressOld");
+        _setPreSignStorage(storageAddressOld, user);
+
+        // WHEN: setting the pre-sign storage to a new address
+        address storageAddressNew = makeAddr("storageAddressNew");
+        userProxy.setPreSignStorage(storageAddressNew);
+
+        // THEN: returns the new address
+        assertEq(userProxy.preSignStorage(), storageAddressNew);
+    }
+
+    function testIsPreSignedHooks_storageNotSetReturnsFalse() external view {
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 deadline = _deadline();
+        bytes32 nonce = "1";
+
+        // GIVEN: user never set the pre-sign storage
+
+        // WHEN: check if the hook is pre-signed
+        // THEN: returns false
+        assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is not pre-signed");
+    }
+
+    function testIsPreSignedHooks_signed() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -108,7 +168,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertTrue(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is not pre-signed");
     }
 
-    function testIsPreSignedHookUnsigned() external view {
+    function testIsPreSignedHooks_unsigned() external view {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -120,7 +180,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
     }
 
-    function testIsPreSignedHookRevoked() external {
+    function testIsPreSignedHooks_revoked() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -135,7 +195,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
     }
 
-    function testIsPreUnsignedForDifferentNonce() external {
+    function testIsPreSignedHooks_signedForDifferentNonce() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -150,7 +210,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertFalse(userProxy.isPreSignedHooks(calls, nonce2, deadline), "hook is pre-signed");
     }
 
-    function testIsPreSignedRevokeUnsigned() external {
+    function testIsPreSignedHooks_revokeUnsigned() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -165,7 +225,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
     }
 
-    function testIsPreUnsignedForDifferentDeadline() external {
+    function testIsPreSignedHooks_signedForDifferentDeadline() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -179,7 +239,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline + 1), "hook is pre-signed");
     }
 
-    function testIsPreUnsignedForDifferentCalls() external {
+    function testIsPreSignedHooks_signedForDifferentCalls() external {
         Call[] memory calls1 = new Call[](1);
         calls1[0] = callWithValue;
 
@@ -196,7 +256,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertFalse(userProxy.isPreSignedHooks(calls2, nonce, deadline), "hook is pre-signed");
     }
 
-    function testPreSignFlowSuccess() external {
+    function testExecutePreSignedHooks_success() external {
         // GIVEN: shed has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 
@@ -218,7 +278,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertEq(address(userProxy).balance, 1 ether - callWithValue.value, "didn't send value as expected");
     }
 
-    function testPreSignFlowUnsigned() external {
+    function testExecutePreSignedHooks_unsignedReverts() external {
         // GIVEN: user has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 
@@ -235,7 +295,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 
-    function testPreSignFlowRevoke() external {
+    function testExecutePreSignedHooks_revokedPreSignReverts() external {
         // GIVEN: user has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 
@@ -256,7 +316,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 
-    function testPreSignFlowRevokeUnsigned() external {
+    function testExecutePreSignedHooks_revokedUnsignedReverts() external {
         // GIVEN: user has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 
@@ -276,7 +336,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 
-    function testPreSignFlowRevertsOnSecondExecution() external {
+    function testExecutePreSignedHooks_revertsOnSecondExecution() external {
         // GIVEN: shed has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 

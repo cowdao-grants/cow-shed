@@ -66,15 +66,25 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     }
 
     /// @inheritdoc ICOWAuthHook
-    function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
-        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
-        _preSign(hash, signed);
+    function setPreSignStorage(address storageContract) external onlyAdmin {
+        _setPreSignStorage(storageContract);
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function preSignStorage() external view returns (address) {
+        return _getPreSignStorage();
     }
 
     /// @inheritdoc ICOWAuthHook
     function isPreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
         bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
         return _isPreSigned(hash);
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
+        _preSign(hash, signed);
     }
 
     /// @inheritdoc ICOWAuthHook
@@ -148,18 +158,6 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @notice trusted executor that can execute arbitrary calls without signature verifications.
     function trustedExecutor() external view returns (address) {
         return _state().trustedExecutor;
-    }
-
-    /// @notice Set the presign storage contract. This enables the presign functionality.
-    ///         Only the admin can call this function.
-    /// @param storageContract Address of the PreSignStateStorage contract, or address(0) to disable
-    function setPreSignStorage(address storageContract) external onlyAdmin {
-        _setPreSignStorage(storageContract);
-    }
-
-    /// @notice Get the address of the presign storage contract
-    function preSignStorage() external view returns (address) {
-        return _getPreSignStorage();
     }
 
     function _executeCalls(Call[] calldata calls, bytes32 nonce) internal {
