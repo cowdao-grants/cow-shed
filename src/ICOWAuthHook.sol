@@ -23,6 +23,10 @@ interface ICOWAuthHook {
     /// @notice Get the address of the presign storage contract
     function preSignStorage() external view returns (address);
 
+    /// @notice Initialize the pre-sign storage to a newly deployed storage contract.
+    ///         This allows to easily opt-in to pre-signing, or easily pre-signatures.
+    function initializePreSignStorage() external;
+
     /// @notice Set the presign storage contract. This enables the presign functionality.
     ///         Only the admin can call this function.
     /// @param storageContract Address of the PreSignStateStorage contract, or address(0) to disable

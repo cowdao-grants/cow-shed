@@ -67,8 +67,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         _executeCalls(calls, nonce);
     }
 
-    /// @notice Initialize the pre-sign storage to a newly deployed storage contract.
-    ///         This allows to easily opt-in to pre-signing, or easily pre-signatures.
+    /// @inheritdoc ICOWAuthHook
     function initializePreSignStorage() external onlyAdmin {
         // deploy the storage contract
         PreSignStateStorage storageContract = new PreSignStateStorage(address(this));
