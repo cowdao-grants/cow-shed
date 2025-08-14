@@ -129,4 +129,11 @@ contract COWShedFactory is COWShedResolver {
 
         return address(storageContract);
     }
+
+    /// @notice Deploy a new PreSignStateStorage contract for the COWShed of the user
+    /// @param user The address of the user to deploy the PreSignStateStorage contract for
+    /// @return The address of the deployed PreSignStateStorage contract
+    function deployPreSignStateStorageForUser(address user) external returns (address) {
+        return this.deployPreSignStateStorage(proxyOf(user));
+    }
 }
