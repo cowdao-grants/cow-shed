@@ -6,6 +6,8 @@ import {Call, ICOWAuthHook} from "./ICOWAuthHook.sol";
 import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
 import {REVERSE_REGISTRAR} from "./ens.sol";
 
+import {PreSignStateStorage} from "./PreSignStateStorage.sol";
+
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
     error OnlyTrustedExecutor();
@@ -64,15 +66,32 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     }
 
     /// @inheritdoc ICOWAuthHook
-    function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
-        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
-        _preSign(hash, signed);
+    function initializePreSignStorage() external onlyAdmin {
+        // deploy the storage contract
+        PreSignStateStorage storageContract = new PreSignStateStorage(address(this));
+        _setPreSignStorage(address(storageContract));
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function setPreSignStorage(address storageContract) external onlyAdmin {
+        _setPreSignStorage(storageContract);
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function preSignStorage() external view returns (address) {
+        return _getPreSignStorage();
     }
 
     /// @inheritdoc ICOWAuthHook
     function isPreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
         bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
         return _isPreSigned(hash);
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
+        _preSign(hash, signed);
     }
 
     /// @inheritdoc ICOWAuthHook
