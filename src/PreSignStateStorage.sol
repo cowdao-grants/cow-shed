@@ -21,13 +21,17 @@ contract PreSignStateStorage {
         _;
     }
 
-    /// @notice Set a hash as presigned or not
+    /// @notice Pre-sign a hash, or revoke a pre-signature.
+    /// @param hash The hash to pre-sign or revoke
+    /// @param signed Whether the hash is pre-signed or not
     function setPreSigned(bytes32 hash, bool signed) external onlyCowShed {
         presignedHashes[hash] = signed;
         emit PreSigned(hash, signed);
     }
 
-    /// @notice Check if a hash is presigned
+    /// @notice Check if a hash is presigned or not.
+    /// @param hash The hash to check
+    /// @return Whether the hash is presigned or not
     function isPreSigned(bytes32 hash) external view returns (bool) {
         return presignedHashes[hash];
     }

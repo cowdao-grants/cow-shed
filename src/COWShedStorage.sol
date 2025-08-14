@@ -24,8 +24,8 @@ contract COWShedStorage {
     struct State {
         bool initialized;
         address trustedExecutor;
-        address preSignStorage; // Address of PreSignStateStorage contract, 0x0 if disabled
-        LibBitmap.Bitmap nonces; // Local nonces for backward compatibility
+        address preSignStorage;
+        LibBitmap.Bitmap nonces;
     }
 
     bytes32 internal constant STATE_STORAGE_SLOT = keccak256("COWShed.State");
