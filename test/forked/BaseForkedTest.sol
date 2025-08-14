@@ -152,6 +152,14 @@ contract BaseForkedTest is Test {
         cowShed.setPreSignStorage(storageContract);
     }
 
+    function _initializePreSignStorage(Vm.Wallet memory _wallet) internal {
+        address proxy = factory.proxyOf(_wallet.addr);
+        COWShed cowShed = COWShed(payable(proxy));
+
+        vm.prank(_wallet.addr);
+        cowShed.initializePreSignStorage();
+    }
+
     function _signWithSmartWalletForProxy(
         Call[] memory calls,
         bytes32 nonce,
