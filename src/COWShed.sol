@@ -6,6 +6,8 @@ import {Call, ICOWAuthHook} from "./ICOWAuthHook.sol";
 import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
 import {REVERSE_REGISTRAR} from "./ens.sol";
 
+import {PreSignStateStorage} from "./PreSignStateStorage.sol";
+
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
     error OnlyTrustedRole();
@@ -63,6 +65,14 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
             revert InvalidSignature();
         }
         _executeCalls(calls, nonce);
+    }
+
+    /// @notice Initialize the pre-sign storage to a newly deployed storage contract.
+    ///         This allows to easily opt-in to pre-signing, or easily pre-signatures.
+    function initializePreSignStorage() external onlyAdmin {
+        // deploy the storage contract
+        PreSignStateStorage storageContract = new PreSignStateStorage(address(this));
+        _setPreSignStorage(address(storageContract));
     }
 
     /// @inheritdoc ICOWAuthHook

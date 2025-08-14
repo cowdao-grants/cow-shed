@@ -117,4 +117,15 @@ contract COWShedFactory is COWShedResolver {
             success = _setForwardNode(user, proxy);
         }
     }
+
+    /// @notice Deploy a new PreSignStateStorage contract for a specific COWShed
+    /// @param cowShed The address of the COWShed contract that will control this storage
+    /// @return The address of the deployed storage contract
+    function deployPreSignStateStorage(address cowShed) external returns (address) {
+        require(cowShed != address(0), "COWShed address cannot be zero");
+
+        PreSignStateStorage storageContract = new PreSignStateStorage(cowShed);
+
+        return address(storageContract);
+    }
 }
