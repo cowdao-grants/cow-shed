@@ -4,21 +4,21 @@ pragma solidity ^0.8.25;
 /// @notice Storage contract for presigned hashes, separate from main COWShed state
 /// This allows users to clear presigned state by redeploying this contract
 contract PreSignStateStorage {
+    event PreSigned(bytes32 indexed hash, bool signed);
+
     address public immutable cowShed;
 
     mapping(bytes32 => bool) public presignedHashes;
-
-    event PreSigned(bytes32 indexed hash, bool signed);
-
-    constructor(address _cowShed) {
-        cowShed = _cowShed;
-    }
 
     modifier onlyCowShed() {
         if (msg.sender != cowShed) {
             revert("Only COWShed can call this function");
         }
         _;
+    }
+
+    constructor(address _cowShed) {
+        cowShed = _cowShed;
     }
 
     /// @notice Pre-sign a hash, or revoke a pre-signature.
