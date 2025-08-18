@@ -5,7 +5,6 @@ import {Test} from "forge-std/Test.sol";
 
 import {DeployScript} from "script/Deploy.s.sol";
 import {COWShed, COWShedFactory, COWShedProxy} from "src/COWShedFactory.sol";
-import {PreSignStateStorage} from "src/PreSignStateStorage.sol";
 
 contract COWShedFactoryTest is Test {
     string constant baseEns = "testcowhooks.eth";
