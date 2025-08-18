@@ -69,7 +69,6 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     /// @inheritdoc ICOWAuthHook
     function resetPreSignStorage() external onlyAdmin {
-        // deploy the storage contract
         PreSignStateStorage storageContract = new PreSignStateStorage(address(this));
         _setPreSignStorage(address(storageContract));
     }
