@@ -8,13 +8,15 @@ import {IPreSignStorage} from "./IPreSignStorage.sol";
 contract PreSignStateStorage is IPreSignStorage {
     event PreSigned(bytes32 indexed hash, bool signed);
 
+    error OnlyCowShed();
+
     address public immutable cowShed;
 
     mapping(bytes32 => bool) public presignedHashes;
 
     modifier onlyCowShed() {
         if (msg.sender != cowShed) {
-            revert("Only COWShed can call this function");
+            revert OnlyCowShed();
         }
         _;
     }
