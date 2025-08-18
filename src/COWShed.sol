@@ -13,6 +13,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     error AlreadyInitialized();
     error OnlyAdmin();
     error OnlyAdminOrTrustedExecutorOrSelf();
+    error NotPreSigned();
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
@@ -59,6 +60,31 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         if (!authorized) {
             revert InvalidSignature();
         }
+        _executeCalls(calls, nonce);
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
+        _preSign(hash, signed);
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function isPreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
+        return _isPreSigned(hash);
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function executePreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external {
+        LibAuthenticatedHooks.verifyDeadline(deadline);
+
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
+
+        if (!_isPreSigned(hash)) {
+            revert NotPreSigned();
+        }
+
         _executeCalls(calls, nonce);
     }
 
