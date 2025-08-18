@@ -4,6 +4,8 @@ pragma solidity ^0.8.25;
 import {BaseForkedTest} from "./BaseForkedTest.sol";
 import {COWShed, COWShedStorage, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
+
+import {COWShedProxy} from "src/COWShedProxy.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 
 /// @dev dummy contract
@@ -133,29 +135,6 @@ contract ForkedCOWShedTest is BaseForkedTest {
         userProxy.executeHooks(calls, nonce, _deadline(), signature);
     }
 
-    function testTrustedExecuteHooks() external {
-        address addr = makeAddr("addr");
-        assertFalse(COWShed(payable(userProxy)).trustedExecutor() == addr, "should not be a trusted executor");
-
-        Call[] memory calls = new Call[](1);
-        calls[0] = Call({
-            target: address(userProxy),
-            callData: abi.encodeCall(COWShed.updateTrustedExecutor, (addr)),
-            allowFailure: false,
-            value: 0,
-            isDelegateCall: false
-        });
-        bytes32 nonce = "1";
-        bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
-        userProxy.executeHooks(calls, nonce, _deadline(), signature);
-
-        vm.prank(addr);
-        vm.expectCall(address(0), hex"1234");
-        calls[0].target = address(0);
-        calls[0].callData = hex"1234";
-        userProxy.trustedExecuteHooks(calls);
-    }
-
     function testUpdateTrustedHook() external {
         address addr = makeAddr("addr");
         assertFalse(COWShed(payable(userProxy)).trustedExecutor() == addr, "should not be a trusted executor");
@@ -173,6 +152,94 @@ contract ForkedCOWShedTest is BaseForkedTest {
         userProxy.executeHooks(calls, nonce, _deadline(), signature);
 
         assertTrue(COWShed(payable(userProxy)).trustedExecutor() == addr, "should be a trusted executor");
+    }
+
+    function testTrustedExecuteHooks_executeCallsFromNewTrustedExecutor() external {
+        // GIVEN: an address that is not the trusted executor
+        address addr = makeAddr("addr");
+        COWShed cowShed = COWShed(payable(userProxy));
+        address trustedExecutor = cowShed.trustedExecutor();
+        assertNotEq(trustedExecutor, addr, "should not be a trusted executor");
+
+        // GIVEN: the address is not the admin neither
+        vm.prank(address(userProxy));
+        address admin = COWShedProxy(payable(userProxy)).admin();
+        assertFalse(admin == addr, "should not be the admin");
+
+        // GIVEN: the admin is not the trusted executor
+        assertNotEq(admin, trustedExecutor, "trustedExecutor should not be the admin");
+
+        // GIVEN: the address becomes the trusted executor
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({
+            target: address(userProxy),
+            callData: abi.encodeCall(COWShed.updateTrustedExecutor, (addr)),
+            allowFailure: false,
+            value: 0,
+            isDelegateCall: false
+        });
+        bytes32 nonce = "1";
+        bytes memory signature = _signForProxy(calls, nonce, _deadline(), user);
+        userProxy.executeHooks(calls, nonce, _deadline(), signature);
+
+        // WHEN: this new trusted executor executes a call
+        // THEN: the call is executed
+        vm.prank(addr);
+        vm.expectCall(address(0), hex"1234");
+        calls[0].target = address(0);
+        calls[0].callData = hex"1234";
+        userProxy.trustedExecuteHooks(calls);
+    }
+
+    function testTrustedExecuteHooks_trustedExecutorSuccess() external {
+        // GIVEN: shed has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+
+        // WHEN: the trusted executor executes a call
+        // THEN: the call is executed
+        vm.expectCall(callWithValue.target, callWithValue.callData);
+        vm.prank(COWShed(payable(userProxy)).trustedExecutor());
+        userProxy.trustedExecuteHooks(calls);
+
+        // THEN: the proxy sent 0.05 ether to the stub
+        assertEq(callWithValue.target.balance, 0.05 ether, "didnt send value as expected");
+        assertEq(address(userProxy).balance, 0.95 ether, "didnt send value as expected");
+    }
+
+    function testTrustedExecuteHooks_adminSuccess() external {
+        // GIVEN: shed has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+
+        // WHEN: the admin executes a call
+        // THEN: the call is executed
+        vm.expectCall(callWithValue.target, callWithValue.callData);
+        vm.prank(user.addr);
+        userProxy.trustedExecuteHooks(calls);
+
+        // THEN: the proxy sent 0.05 ether to the stub
+        assertEq(callWithValue.target.balance, 0.05 ether, "didnt send value as expected");
+        assertEq(address(userProxy).balance, 0.95 ether, "didnt send value as expected");
+    }
+
+    function testTrustedExecuteHooks_neitherAdminNorTrustedExecutorError() external {
+        // GIVEN: shed has 1 ether
+        vm.deal(userProxyAddr, 1 ether);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+
+        // WHEN: someone other than the trusted executor or the admin executes a call
+        // THEN: the call should revert
+        vm.expectRevert(COWShed.OnlyTrustedRole.selector);
+        address neitherAdminNorTrustedExecutor = makeAddr("neitherAdminNorTrustedExecutor");
+        vm.prank(neitherAdminNorTrustedExecutor);
+        userProxy.trustedExecuteHooks(calls);
     }
 
     function testUpdateImplementation() external {
