@@ -65,12 +65,12 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertEq(userProxy.preSignStorage(), storageAddress2);
     }
 
-    function testInitializePreSignStorage_uninitialized() external {
+    function testResetPreSignStorage_uninitialized() external {
         // GIVEN: user never initialized the pre-sign storage
 
         // WHEN: initializing the pre-sign storage
         vm.prank(user.addr);
-        userProxy.initializePreSignStorage();
+        userProxy.resetPreSignStorage();
 
         // THEN: the pre-sign storage has been initialized
         address storageAddress = userProxy.preSignStorage();
@@ -78,14 +78,14 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertTrue(storageAddress.code.length > 0);
     }
 
-    function testInitializePreSignStorage_alreadyInitialized() external {
+    function testResetPreSignStorage_alreadyInitialized() external {
         // GIVEN: user never initialized the pre-sign storage
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         address storageAddressOld = userProxy.preSignStorage();
 
         // WHEN: initializing the pre-sign storage again
         vm.prank(user.addr);
-        userProxy.initializePreSignStorage();
+        userProxy.resetPreSignStorage();
 
         // THEN: the pre-sign storage has been re-assigned to a new contract
         address storageAddressNew = userProxy.preSignStorage();
@@ -137,7 +137,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user initialized the pre-sign storage
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
 
         // WHEN: execute pre-signed the hook
         vm.prank(user.addr);
@@ -211,7 +211,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed a hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // WHEN: check if the hook is pre-signed
@@ -238,7 +238,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user had a hook signed, and then revoked it
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
         _presignForProxy(calls, nonce, deadline, false, user);
 
@@ -255,7 +255,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce2 = "2";
 
         // GIVEN: user has pre-signed the hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce1, deadline, true, user);
 
         // WHEN: check if the hook is pre-signed if we change the nonce
@@ -270,7 +270,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has not pre-signed the hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
 
         // GIVEN: the user revokes the pre-signed hook
         _presignForProxy(calls, nonce, deadline, false, user);
@@ -287,7 +287,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed the hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // WHEN: check if the hook is pre-signed if we change the deadline
@@ -305,7 +305,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed the hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls1, nonce, deadline, true, user);
 
         // WHEN: check if the hook is pre-signed if we change the calls
@@ -323,7 +323,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed hook to send ether to the stub
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // WHEN: execute the pre-signed hook
@@ -346,7 +346,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has not pre-signed the hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
 
         // WHEN: pre-sign the hook
         // THEN: the call should revert
@@ -364,7 +364,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed the hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // GIVEN: the user revokes the pre-signed hook
@@ -386,7 +386,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has not pre-signed hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
 
         // GIVEN: the user revokes the pre-signed hook
         _presignForProxy(calls, nonce, deadline, false, user);
@@ -407,7 +407,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: A user executes has already executed a pre-signed hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
 
@@ -427,7 +427,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed hook
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // GIVEN: they set the pre-sign storage to zero
@@ -439,7 +439,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
 
-    function testExecutePreSignedHooks_revertsAfterReinitializePreSignStorage() external {
+    function testExecutePreSignedHooks_revertsAfterReresetPreSignStorage() external {
         // GIVEN: shed has 1 ether
         vm.deal(userProxyAddr, 1 ether);
 
@@ -449,11 +449,11 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed hook to send ether to the stub
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // GIVEN: they re-initialized the pre-sign storage
-        _initializePreSignStorage(user);
+        _resetPreSignStorage(user);
 
         // WHEN: execute the pre-signed hook
         // THEN: the hook is executed
