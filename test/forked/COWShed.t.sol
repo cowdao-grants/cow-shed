@@ -4,6 +4,8 @@ pragma solidity ^0.8.25;
 import {BaseForkedTest} from "./BaseForkedTest.sol";
 import {COWShed, COWShedStorage, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
+
+import {COWShedProxy} from "src/COWShedProxy.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 
 /// @dev dummy contract
@@ -165,9 +167,19 @@ contract ForkedCOWShedTest is BaseForkedTest {
     }
 
     function testTrustedExecuteHooks_executeCallsFromNewTrustedExecutor() external {
-        // GIVEN: an address that was not originally the trusted executor
+        // GIVEN: an address that is not the trusted executor
         address addr = makeAddr("addr");
-        assertFalse(COWShed(payable(userProxy)).trustedExecutor() == addr, "should not be a trusted executor");
+        COWShed cowShed = COWShed(payable(userProxy));
+        address trustedExecutor = cowShed.trustedExecutor();
+        assertNotEq(trustedExecutor, addr, "should not be a trusted executor");
+
+        // GIVEN: the address is not the admin neither
+        vm.prank(address(userProxy));
+        address admin = COWShedProxy(payable(userProxy)).admin();
+        assertFalse(admin == addr, "should not be the admin");
+
+        // GIVEN: the admin is not the trusted executor
+        assertNotEq(admin, trustedExecutor, "trustedExecutor should not be the admin");
 
         // GIVEN: the address becomes the trusted executor
         Call[] memory calls = new Call[](1);
