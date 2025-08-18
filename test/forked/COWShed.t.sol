@@ -32,7 +32,6 @@ contract Stub {
 contract ForkedCOWShedTest is BaseForkedTest {
     Stub stub;
     Call callWithValue;
-    Call callWillRevert;
 
     function setUp() public override {
         super.setUp();
@@ -43,14 +42,6 @@ contract ForkedCOWShedTest is BaseForkedTest {
             value: 0.05 ether,
             allowFailure: false,
             callData: abi.encodeCall(stub.callWithValue, ()),
-            isDelegateCall: false
-        });
-
-        callWillRevert = Call({
-            target: address(stub),
-            value: 0,
-            allowFailure: true,
-            callData: abi.encodeCall(stub.willRevert, ()),
             isDelegateCall: false
         });
     }
