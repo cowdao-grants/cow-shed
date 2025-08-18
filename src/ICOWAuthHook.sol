@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
+import {IPreSignStorage} from "./IPreSignStorage.sol";
+
 struct Call {
     address target;
     uint256 value;
@@ -21,16 +23,16 @@ interface ICOWAuthHook {
     function updateTrustedExecutor(address who) external;
 
     /// @notice Get the address of the presign storage contract
-    function preSignStorage() external view returns (address);
+    function preSignStorage() external view returns (IPreSignStorage);
 
     /// @notice Initialize the pre-sign storage to a newly deployed storage contract.
     ///         This allows to easily opt-in to pre-signing, or easily pre-signatures.
-    function resetPreSignStorage() external;
+    function resetPreSignStorage() external returns (IPreSignStorage);
 
     /// @notice Set the presign storage contract. This enables the presign functionality.
     ///         Only the admin can call this function.
-    /// @param storageContract Address of the PreSignStateStorage contract, or address(0) to disable
-    function setPreSignStorage(address storageContract) external;
+    /// @param storageContract Address of the IPreSignStorage contract, or address(0) to disable
+    function setPreSignStorage(IPreSignStorage storageContract) external returns (IPreSignStorage);
 
     /// @notice on-chain sign a set of hooks. Once signed, the calls can be executed at
     /// any time until the deadline is passed.

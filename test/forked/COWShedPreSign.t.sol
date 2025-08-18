@@ -5,6 +5,8 @@ import {Stub} from "../lib/Stub.sol";
 import {BaseForkedTest} from "./BaseForkedTest.sol";
 import {COWShed, COWShedStorage, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
+
+import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 
 contract ForkedCOWShedPreSignTest is BaseForkedTest {
@@ -38,31 +40,30 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
 
         // WHEN: checking the pre-sign storage
         // THEN: returns the zero-address
-        assertEq(userProxy.preSignStorage(), address(0));
+        assertPreSignStorageEq(userProxy.preSignStorage(), ZERO_ADDRESS_PRESIGN_STORAGE);
     }
 
     function testPreSignStorage_initializedReturnValue() external {
         // GIVEN: user initialized the storage
-        address storageAddress = makeAddr("mockStorage");
-        _setPreSignStorage(storageAddress, user);
+        IPreSignStorage presignStorage = IPreSignStorage(makeAddr("mockStorage"));
+        _setPreSignStorage(presignStorage, user);
 
         // WHEN: checking the pre-sign storage
         // THEN: returns the address we set
-        assertEq(userProxy.preSignStorage(), storageAddress);
+        assertPreSignStorageEq(userProxy.preSignStorage(), presignStorage);
     }
 
     function testPreSignStorage_replacedAddressReturnsValue() external {
         // GIVEN: user initialized the storage
-        address storageAddress1 = makeAddr("storageAddress1");
-        _setPreSignStorage(storageAddress1, user);
+        _setPreSignStorage(IPreSignStorage(makeAddr("storage1")), user);
 
         // GIVEN: user replaces it to a new storage
-        address storageAddress2 = makeAddr("storageAddress2");
-        _setPreSignStorage(storageAddress2, user);
+        IPreSignStorage newStorage = IPreSignStorage(makeAddr("storage2"));
+        _setPreSignStorage(newStorage, user);
 
         // WHEN: checking the pre-sign storage
         // THEN: returns the latest storage the user set
-        assertEq(userProxy.preSignStorage(), storageAddress2);
+        assertPreSignStorageEq(userProxy.preSignStorage(), newStorage);
     }
 
     function testResetPreSignStorage_uninitialized() external {
@@ -70,28 +71,34 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
 
         // WHEN: initializing the pre-sign storage
         vm.prank(user.addr);
-        userProxy.resetPreSignStorage();
+        IPreSignStorage storageReturned = userProxy.resetPreSignStorage();
 
-        // THEN: the pre-sign storage has been initialized
-        address storageAddress = userProxy.preSignStorage();
-        assertNotEq(storageAddress, address(0));
-        assertTrue(storageAddress.code.length > 0);
+        // THEN: the pre-sign storage has been initialized to a new contract
+        assertNotEq(address(storageReturned), address(0));
+        assertTrue(address(storageReturned).code.length > 0);
+
+        // THEN: the contract matches the one returned in the reset function
+        IPreSignStorage storageGetter = userProxy.preSignStorage();
+        assertPreSignStorageEq(storageGetter, storageReturned);
     }
 
     function testResetPreSignStorage_alreadyInitialized() external {
         // GIVEN: user never initialized the pre-sign storage
-        _resetPreSignStorage(user);
-        address storageAddressOld = userProxy.preSignStorage();
+        IPreSignStorage storageOld = _resetPreSignStorage(user);
 
         // WHEN: initializing the pre-sign storage again
         vm.prank(user.addr);
-        userProxy.resetPreSignStorage();
+        IPreSignStorage storageReturned = userProxy.resetPreSignStorage();
 
-        // THEN: the pre-sign storage has been re-assigned to a new contract
-        address storageAddressNew = userProxy.preSignStorage();
-        assertNotEq(storageAddressNew, storageAddressOld);
-        assertNotEq(storageAddressNew, address(0));
-        assertTrue(storageAddressNew.code.length > 0);
+        // THEN: the storage changed
+        assertNotEq(address(storageOld), address(storageReturned));
+
+        // THEN: The storage is not the zero-address
+        assertNotEq(address(storageReturned), address(0));
+
+        // THEN: the pre-sign storage matches the one returned in the reset function
+        IPreSignStorage storageAddressNew = userProxy.preSignStorage();
+        assertPreSignStorageEq(storageAddressNew, storageReturned);
     }
 
     function testSetPreSignStorage_setZeroAddress() external {
@@ -99,35 +106,39 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
 
         // WHEN: setting the pre-sign storage to zero
         vm.prank(user.addr);
-        userProxy.setPreSignStorage(address(0));
+        IPreSignStorage storageReturned = userProxy.setPreSignStorage(ZERO_ADDRESS_PRESIGN_STORAGE);
 
-        // THEN: returns the zero-address
-        assertEq(userProxy.preSignStorage(), address(0));
+        // THEN: the returned storage is the zero-address
+        assertPreSignStorageEq(storageReturned, ZERO_ADDRESS_PRESIGN_STORAGE);
+
+        // THEN: the current storage is also the zero-address
+        assertPreSignStorageEq(userProxy.preSignStorage(), ZERO_ADDRESS_PRESIGN_STORAGE);
     }
 
     function testSetPreSignStorage_setNonZeroAddress() external {
         // GIVEN: user never set the pre-sign storage
 
-        // WHEN: setting the pre-sign storage to zero
-        address storageAddress = makeAddr("storageAddress");
+        // WHEN: setting the pre-sign storage to some address
+        IPreSignStorage presignStorage = IPreSignStorage(makeAddr("presignStorage"));
         vm.prank(user.addr);
-        userProxy.setPreSignStorage(storageAddress);
+        IPreSignStorage storageReturned = userProxy.setPreSignStorage(presignStorage);
 
-        // THEN: returns the storageAddress
-        assertEq(userProxy.preSignStorage(), storageAddress);
+        // THEN: returns the presignStorage
+        assertPreSignStorageEq(storageReturned, presignStorage);
+        assertPreSignStorageEq(userProxy.preSignStorage(), presignStorage);
     }
 
     function testSetPreSignStorage_setZeroAddressToInitializedStorage() external {
         // GIVEN: user had set the pre-sign storage
-        address storageAddress = makeAddr("storageAddress");
-        _setPreSignStorage(storageAddress, user);
+        _setPreSignStorage(IPreSignStorage(makeAddr("storageAddress")), user);
 
         // WHEN: setting the pre-sign storage to zero
         vm.prank(user.addr);
-        userProxy.setPreSignStorage(address(0));
+        IPreSignStorage storageReturned = userProxy.setPreSignStorage(ZERO_ADDRESS_PRESIGN_STORAGE);
 
         // THEN: returns the zero-address
-        assertEq(userProxy.preSignStorage(), address(0));
+        assertPreSignStorageEq(storageReturned, ZERO_ADDRESS_PRESIGN_STORAGE);
+        assertPreSignStorageEq(userProxy.preSignStorage(), ZERO_ADDRESS_PRESIGN_STORAGE);
     }
 
     function testPreSignHooks_initializedStorage() external {
@@ -179,16 +190,16 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
 
     function testSetPreSignStorage_replaceAddress() external {
         // GIVEN: user had set the pre-sign storage
-        address storageAddressOld = makeAddr("storageAddressOld");
+        IPreSignStorage storageAddressOld = IPreSignStorage(makeAddr("storageAddressOld"));
         _setPreSignStorage(storageAddressOld, user);
 
         // WHEN: setting the pre-sign storage to a new address
-        address storageAddressNew = makeAddr("storageAddressNew");
+        IPreSignStorage storageAddressNew = IPreSignStorage(makeAddr("storageAddressNew"));
         vm.prank(user.addr);
         userProxy.setPreSignStorage(storageAddressNew);
 
         // THEN: returns the new address
-        assertEq(userProxy.preSignStorage(), storageAddressNew);
+        assertPreSignStorageEq(userProxy.preSignStorage(), storageAddressNew);
     }
 
     function testIsPreSignedHooks_storageNotSetReturnsFalse() external view {
@@ -431,7 +442,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // GIVEN: they set the pre-sign storage to zero
-        _setPreSignStorage(address(0), user);
+        _setPreSignStorage(ZERO_ADDRESS_PRESIGN_STORAGE, user);
 
         // WHEN: execute the pre-signed hook
         // THEN: the hook is not pre-signed anymore

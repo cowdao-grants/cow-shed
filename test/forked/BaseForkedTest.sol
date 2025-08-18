@@ -6,6 +6,8 @@ import {LibString} from "solady/utils/LibString.sol";
 import {COWShed, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
+
+import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 import {ENS, IAddrResolver, INameResolver} from "src/ens.sol";
 import {ForkedRpc} from "test/forked/ForkedRpc.sol";
@@ -42,6 +44,8 @@ contract SmartWallet {
 }
 
 contract BaseForkedTest is Test {
+    IPreSignStorage constant ZERO_ADDRESS_PRESIGN_STORAGE = IPreSignStorage(address(0));
+
     // Nothing special about this block, it's the latest at the time of writing.
     uint256 constant MAINNET_FORKED_BLOCK = 22947477;
 
@@ -144,20 +148,23 @@ contract BaseForkedTest is Test {
         cowShed.preSignHooks(calls, nonce, deadline, signed);
     }
 
-    function _setPreSignStorage(address storageContract, Vm.Wallet memory _wallet) internal {
+    function _setPreSignStorage(IPreSignStorage storageContract, Vm.Wallet memory _wallet)
+        internal
+        returns (IPreSignStorage)
+    {
         address proxy = factory.proxyOf(_wallet.addr);
         COWShed cowShed = COWShed(payable(proxy));
 
         vm.prank(_wallet.addr);
-        cowShed.setPreSignStorage(storageContract);
+        return cowShed.setPreSignStorage(storageContract);
     }
 
-    function _resetPreSignStorage(Vm.Wallet memory _wallet) internal {
+    function _resetPreSignStorage(Vm.Wallet memory _wallet) internal returns (IPreSignStorage) {
         address proxy = factory.proxyOf(_wallet.addr);
         COWShed cowShed = COWShed(payable(proxy));
 
         vm.prank(_wallet.addr);
-        cowShed.resetPreSignStorage();
+        return cowShed.resetPreSignStorage();
     }
 
     function _signWithSmartWalletForProxy(
@@ -218,5 +225,17 @@ contract BaseForkedTest is Test {
     function _setOwnerForEns(bytes32 node, address owner) internal {
         vm.store(address(ENS), _recordOwnerSlotInEns(node), bytes32(uint256(uint160(address(owner)))));
         assertEq(ENS.owner(node), address(owner), "ens owner not set as expected");
+    }
+
+    // PreSignStorage assertion helpers
+    function assertPreSignStorageEq(IPreSignStorage expected, IPreSignStorage actual, string memory message)
+        internal
+        pure
+    {
+        assertEq(address(expected), address(actual), message);
+    }
+
+    function assertPreSignStorageEq(IPreSignStorage expected, IPreSignStorage actual) internal pure {
+        assertPreSignStorageEq(expected, actual, "");
     }
 }

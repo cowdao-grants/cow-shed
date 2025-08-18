@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
+import {IPreSignStorage} from "./IPreSignStorage.sol";
 import {LibBitmap} from "solady/utils/LibBitmap.sol";
 
 /// @dev bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1)
@@ -8,11 +9,6 @@ bytes32 constant IMPLEMENTATION_STORAGE_SLOT = 0x360894a13ba1a3210667c828492db98
 
 interface IAdminView {
     function admin() external view returns (address);
-}
-
-interface IPreSignStateStorage {
-    function setPreSigned(bytes32 hash, bool signed) external;
-    function isPreSigned(bytes32 hash) external view returns (bool);
 }
 
 contract COWShedStorage {
@@ -24,7 +20,7 @@ contract COWShedStorage {
     struct State {
         bool initialized;
         address trustedExecutor;
-        address preSignStorage;
+        IPreSignStorage preSignStorage;
         LibBitmap.Bitmap nonces;
     }
 
@@ -50,27 +46,12 @@ contract COWShedStorage {
         return _state().nonces.get(uint256(_nonce));
     }
 
-    function _preSign(bytes32 _hash, bool _signed) internal {
-        address storageContract = _state().preSignStorage;
-        if (storageContract == address(0)) {
-            revert PreSignStorageNotSet();
-        }
-        IPreSignStateStorage(storageContract).setPreSigned(_hash, _signed);
-    }
-
-    function _isPreSigned(bytes32 _hash) internal view returns (bool) {
-        address storageContract = _state().preSignStorage;
-        if (storageContract == address(0)) {
-            return false; // If no storage contract, nothing is presigned
-        }
-        return IPreSignStateStorage(storageContract).isPreSigned(_hash);
-    }
-
-    function _setPreSignStorage(address _storage) internal {
+    function _setPreSignStorage(IPreSignStorage _storage) internal returns (IPreSignStorage) {
         _state().preSignStorage = _storage;
+        return _storage;
     }
 
-    function _getPreSignStorage() internal view returns (address) {
+    function _getPreSignStorage() internal view returns (IPreSignStorage) {
         return _state().preSignStorage;
     }
 }
