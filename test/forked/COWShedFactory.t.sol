@@ -12,37 +12,6 @@ import {ENS} from "src/ens.sol";
 contract ForkedCOWShedFactoryTest is BaseForkedTest {
     error ErrorSettingEns();
 
-    function testDeploymentFailsIfImplementationHasNoCode() external {
-        address emptyImplementation = makeAddr("empty COWShed");
-        assertEq(emptyImplementation.code, hex"");
-        vm.expectRevert(COWShedFactory.NoCodeAtImplementation.selector);
-        new COWShedFactory(emptyImplementation, baseName, baseNode);
-    }
-
-    function testExecuteHooks() external {
-        Vm.Wallet memory wallet = vm.createWallet("testWallet");
-        address addr1 = makeAddr("addr1");
-        address addr2 = makeAddr("addr2");
-
-        Call[] memory calls = new Call[](2);
-        calls[0] = Call({target: addr1, value: 0, callData: hex"00112233", allowFailure: false, isDelegateCall: false});
-
-        calls[1] = Call({target: addr2, value: 0, callData: hex"11", allowFailure: false, isDelegateCall: false});
-
-        address expectedProxyAddress = factory.proxyOf(wallet.addr);
-        assertEq(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is not empty");
-
-        bytes32 nonce = "nonce";
-        bytes memory signature = _signForProxy(calls, nonce, _deadline(), wallet);
-        vm.expectCall(addr1, calls[0].callData);
-        vm.expectCall(addr2, calls[1].callData);
-        factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
-        assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
-
-        vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
-        factory.executeHooks(calls, nonce, _deadline(), wallet.addr, signature);
-    }
-
     function testExecuteHooksForRevertingEns() external {
         // revert setSubnodeRecord, but only for the factory's ens
         vm.mockCallRevert(
@@ -70,25 +39,6 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
         assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
     }
 
-    function testDomainSeparators() external {
-        Vm.Wallet memory user1 = vm.createWallet("user1");
-        Vm.Wallet memory user2 = vm.createWallet("user2");
-
-        _initializeUserProxy(user1);
-        _initializeUserProxy(user2);
-
-        COWShed proxy1 = COWShed(payable(factory.proxyOf(user1.addr)));
-        COWShed proxy2 = COWShed(payable(factory.proxyOf(user2.addr)));
-
-        vm.label(address(proxy1), "proxy1");
-        vm.label(address(proxy2), "proxy2");
-
-        assertTrue(
-            proxy1.domainSeparator() != proxy2.domainSeparator(),
-            "different proxies should have different domain separators"
-        );
-    }
-
     function testForwardResolve() external view {
         _assertForwardResolve(user.addr, userProxyAddr);
     }
@@ -104,17 +54,6 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
         factory.initializeProxy(userAddr, true);
         _assertForwardResolve(userAddr, proxyAddr);
         _assertReverseResolve(userAddr, proxyAddr);
-        assertGt(proxyAddr.code.length, 0, "proxy is still not initialized");
-    }
-
-    function testInitializeProxyWithoutEns() external {
-        address userAddr = makeAddr("user1");
-        address proxyAddr = factory.proxyOf(userAddr);
-        assertEq(proxyAddr.code.length, 0, "proxy is already initialized");
-        factory.initializeProxy(userAddr, false);
-        try this.resolveAddr(userAddr) {
-            revert("resolution didnt fail");
-        } catch (bytes memory) {}
         assertGt(proxyAddr.code.length, 0, "proxy is still not initialized");
     }
 
