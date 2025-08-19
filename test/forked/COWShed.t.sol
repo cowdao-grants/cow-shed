@@ -85,6 +85,22 @@ contract ForkedCOWShedTest is BaseForkedTest {
         userProxy.executeHooks(calls, nonce, _deadline(), signature);
     }
 
+    function testExecuteHooks_revertsOnInvalidEcdsaSignature() external {
+        Call[] memory calls = new Call[](0);
+        bytes32 nonce = "1337";
+        uint256 deadline = _deadline();
+        bytes memory signature = _signForProxy(calls, nonce, deadline, user);
+
+        // Invalidate signature.
+        unchecked {
+            // Unchecked: overflowing is intended behavior.
+            signature[0] = bytes1(uint8(signature[0]) + 1);
+        }
+
+        vm.expectRevert(LibAuthenticatedHooks.InvalidSignature.selector);
+        userProxy.executeHooks(calls, nonce, deadline, signature);
+    }
+
     function testExecuteHooksDeadline() external {
         Call[] memory calls = new Call[](1);
         calls[0] = Call({target: address(0), value: 0, allowFailure: false, callData: hex"0011", isDelegateCall: false});
@@ -268,6 +284,14 @@ contract ForkedCOWShedTest is BaseForkedTest {
         smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
 
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
+    }
+
+    function testExecuteHooks_revertsForInvalidSmartAccountSignature() external {
+        Call[] memory calls = new Call[](0);
+        bytes32 nonce = "1337";
+        bytes memory sig = "invalid";
+        vm.expectRevert(COWShed.InvalidSignature.selector);
+        smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
     }
 
     function testIsPreSignedHook() external {
