@@ -16,7 +16,7 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
         // revert setSubnodeRecord, but only for the factory's ens
         vm.mockCallRevert(
             address(ENS),
-            abi.encodePacked(ENS.setSubnodeRecord.selector, baseNode),
+            abi.encodePacked(ENS.setSubnodeRecord.selector, LibString.toSmallString(baseEns)),
             abi.encodePacked(ErrorSettingEns.selector)
         );
 
@@ -58,32 +58,18 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
     }
 
     function resolveAddr(address userAddr) external view returns (address) {
-        return _resolveAddr(
-            vm.ensNamehash(
-                string(abi.encodePacked(LibString.toHexString(userAddr), ".", LibString.fromSmallString(baseName)))
-            )
-        );
+        return _resolveAddr(vm.ensNamehash(string(abi.encodePacked(LibString.toHexString(userAddr), ".", baseEns))));
     }
 
     function _assertForwardResolve(address userAddr, address expectedResolution) internal view {
         assertEq(
-            _resolveAddr(
-                vm.ensNamehash(
-                    string(abi.encodePacked(LibString.toHexString(userAddr), ".", LibString.fromSmallString(baseName)))
-                )
-            ),
+            _resolveAddr(vm.ensNamehash(string(abi.encodePacked(LibString.toHexString(userAddr), ".", baseEns)))),
             expectedResolution,
             "forward resolution for lower case address failed"
         );
         assertEq(
             _resolveAddr(
-                vm.ensNamehash(
-                    string(
-                        abi.encodePacked(
-                            LibString.toHexStringChecksummed(userAddr), ".", LibString.fromSmallString(baseName)
-                        )
-                    )
-                )
+                vm.ensNamehash(string(abi.encodePacked(LibString.toHexStringChecksummed(userAddr), ".", baseEns)))
             ),
             expectedResolution,
             "forward resolution for checksummed address failed"
@@ -93,9 +79,7 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
     function _assertReverseResolve(address userAddr, address proxyAddr) internal view {
         assertEq(
             _reverseResolve(proxyAddr),
-            string(
-                abi.encodePacked(LibString.toHexStringChecksummed(userAddr), ".", LibString.fromSmallString(baseName))
-            ),
+            string(abi.encodePacked(LibString.toHexStringChecksummed(userAddr), ".", baseEns)),
             "reverse resolution failed"
         );
     }

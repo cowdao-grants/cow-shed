@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 import {Test, Vm} from "forge-std/Test.sol";
+import {DeployScript} from "script/Deploy.s.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {COWShed, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
@@ -45,8 +46,7 @@ contract BaseTest is Test {
     address userProxyAddr;
     COWShed userProxy;
     COWShed cowshedImpl;
-    bytes32 baseName = "cowhooks.eth";
-    bytes32 baseNode = vm.ensNamehash(LibString.fromSmallString(baseName));
+    string constant baseEns = "cowhooks.eth";
 
     COWShedFactory factory;
     LibAuthenticatedHooksCalldataProxy cproxy;
@@ -57,13 +57,12 @@ contract BaseTest is Test {
     COWShed smartWalletProxy;
 
     function setUp() public virtual {
-        cowshedImpl = new COWShed();
-        cproxy = new LibAuthenticatedHooksCalldataProxy();
+        DeployScript s = new DeployScript();
+        DeployScript.Deployment memory deployment = s.deploy(baseEns);
 
-        uint256 nonce = vm.getNonce(address(this));
-        address factoryAddressExpected = vm.computeCreateAddress(address(this), nonce);
-        factory = new COWShedFactory(address(cowshedImpl), baseName, baseNode);
-        assertEq(address(factory), factoryAddressExpected, "factory address as not expected");
+        cowshedImpl = deployment.cowShed;
+        factory = deployment.factory;
+        cproxy = new LibAuthenticatedHooksCalldataProxy();
 
         user = vm.createWallet("user");
         userProxyAddr = factory.proxyOf(user.addr);

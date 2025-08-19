@@ -9,6 +9,9 @@ import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 import {ENS, IAddrResolver, INameResolver} from "src/ens.sol";
+
+import {SALT} from "script/Deploy.s.sol";
+import {factoryCreationCode} from "test/Deploy.t.sol";
 import {ForkedRpc} from "test/forked/ForkedRpc.sol";
 import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
 
@@ -49,17 +52,14 @@ contract BaseForkedTest is BaseTest {
     function setUp() public virtual override {
         ForkedRpc.forkEthereumMainnetAtBlock(vm, MAINNET_FORKED_BLOCK);
 
-        uint256 nonce = vm.getNonce(address(this));
-        uint256 nonceOffset = 2;
-        address factoryAddressExpected = vm.computeCreateAddress(address(this), nonce + nonceOffset);
-        _setOwnerForEns(baseNode, address(factoryAddressExpected));
+        address cowShedAddressExpected = vm.computeCreate2Address(SALT, keccak256(type(COWShed).creationCode));
+        address factoryAddressExpected =
+            vm.computeCreate2Address(SALT, keccak256(factoryCreationCode(vm, cowShedAddressExpected, baseEns)));
+        _setOwnerForEns(vm.ensNamehash(baseEns), address(factoryAddressExpected));
 
         super.setUp();
 
-        require(
-            factoryAddressExpected == address(factory),
-            "Invalid test setup: factory address doesn't match, try to adjust the nonce offset"
-        );
+        require(factoryAddressExpected == address(factory), "Invalid test setup: factory address doesn't match");
 
         assertEq(
             _reverseResolve(0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045), "vitalik.eth", "reverse resolve impl failed"
