@@ -68,6 +68,17 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertPreSignStorageEq(userProxy.preSignStorage(), newStorage);
     }
 
+    function testResetPreSignStorage_unauthorized() external {
+        // GIVEN: a user that is not the admin
+        address notAdmin = makeAddr("notAdmin");
+
+        // WHEN: resetting the pre-sign storage from a non-admin address
+        // THEN: reverts with OnlyAdmin
+        vm.expectRevert(COWShed.OnlyAdmin.selector);
+        vm.prank(notAdmin);
+        userProxy.resetPreSignStorage();
+    }
+
     function testResetPreSignStorage_uninitialized() external {
         // GIVEN: user never initialized the pre-sign storage
 
@@ -101,6 +112,17 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: the pre-sign storage matches the one returned in the reset function
         IPreSignStorage storageAddressNew = userProxy.preSignStorage();
         assertPreSignStorageEq(storageAddressNew, storageReturned);
+    }
+
+    function testSetPreSignStorage_unauthorized() external {
+        // GIVEN: a user that is not the admin
+        address notAdmin = makeAddr("notAdmin");
+
+        // WHEN: setting the pre-sign storage for a non-admin address
+        // THEN: reverts with OnlyAdmin
+        vm.expectRevert(COWShed.OnlyAdmin.selector);
+        vm.prank(notAdmin);
+        userProxy.setPreSignStorage(EMPTY_PRE_SIGN_STORAGE);
     }
 
     function testSetPreSignStorage_setZeroAddress() external {
@@ -150,6 +172,17 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: returns the zero-address
         assertPreSignStorageEq(storageReturned, EMPTY_PRE_SIGN_STORAGE);
         assertPreSignStorageEq(userProxy.preSignStorage(), EMPTY_PRE_SIGN_STORAGE);
+    }
+
+    function testPreSignHooks_unauthorized() external {
+        // GIVEN: a user that is not the admin
+        address notAdmin = makeAddr("notAdmin");
+
+        // WHEN: pre-signing a hook from a non-admin address
+        // THEN: reverts with OnlyAdmin
+        vm.expectRevert(COWShed.OnlyAdmin.selector);
+        vm.prank(notAdmin);
+        userProxy.preSignHooks(new Call[](0), "1", _deadline(), true);
     }
 
     function testPreSignHooks_initializedStorage() external {
