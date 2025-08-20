@@ -42,7 +42,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
 
         // WHEN: checking the pre-sign storage
         // THEN: returns the zero-address
-        assertPreSignStorageEq(userProxy.preSignStorage(), ZERO_ADDRESS_PRESIGN_STORAGE);
+        assertPreSignStorageEq(userProxy.preSignStorage(), EMPTY_PRE_SIGN_STORAGE);
     }
 
     function testPreSignStorage_initializedReturnValue() external {
@@ -76,7 +76,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         IPreSignStorage storageReturned = userProxy.resetPreSignStorage();
 
         // THEN: the pre-sign storage has been initialized to a new contract
-        assertNotEq(address(storageReturned), address(0));
+        assertNotEq(address(storageReturned), address(EMPTY_PRE_SIGN_STORAGE));
         assertTrue(address(storageReturned).code.length > 0);
 
         // THEN: the contract matches the one returned in the reset function
@@ -95,8 +95,8 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: the storage changed
         assertNotEq(address(storageOld), address(storageReturned));
 
-        // THEN: The storage is not the zero-address
-        assertNotEq(address(storageReturned), address(0));
+        // THEN: The storage is not the empty pre-sign storage
+        assertNotEq(address(storageReturned), address(EMPTY_PRE_SIGN_STORAGE));
 
         // THEN: the pre-sign storage matches the one returned in the reset function
         IPreSignStorage storageAddressNew = userProxy.preSignStorage();
@@ -110,14 +110,14 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
         vm.expectEmit(true, true, false, false);
-        emit PreSignStorageChanged(address(0));
-        IPreSignStorage storageReturned = userProxy.setPreSignStorage(ZERO_ADDRESS_PRESIGN_STORAGE);
+        emit PreSignStorageChanged(address(EMPTY_PRE_SIGN_STORAGE));
+        IPreSignStorage storageReturned = userProxy.setPreSignStorage(EMPTY_PRE_SIGN_STORAGE);
 
         // THEN: the returned storage is the zero-address
-        assertPreSignStorageEq(storageReturned, ZERO_ADDRESS_PRESIGN_STORAGE);
+        assertPreSignStorageEq(storageReturned, EMPTY_PRE_SIGN_STORAGE);
 
         // THEN: the current storage is also the zero-address
-        assertPreSignStorageEq(userProxy.preSignStorage(), ZERO_ADDRESS_PRESIGN_STORAGE);
+        assertPreSignStorageEq(userProxy.preSignStorage(), EMPTY_PRE_SIGN_STORAGE);
     }
 
     function testSetPreSignStorage_setNonZeroAddress() external {
@@ -144,12 +144,12 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
         vm.expectEmit(true, true, false, false);
-        emit PreSignStorageChanged(address(0));
-        IPreSignStorage storageReturned = userProxy.setPreSignStorage(ZERO_ADDRESS_PRESIGN_STORAGE);
+        emit PreSignStorageChanged(address(EMPTY_PRE_SIGN_STORAGE));
+        IPreSignStorage storageReturned = userProxy.setPreSignStorage(EMPTY_PRE_SIGN_STORAGE);
 
         // THEN: returns the zero-address
-        assertPreSignStorageEq(storageReturned, ZERO_ADDRESS_PRESIGN_STORAGE);
-        assertPreSignStorageEq(userProxy.preSignStorage(), ZERO_ADDRESS_PRESIGN_STORAGE);
+        assertPreSignStorageEq(storageReturned, EMPTY_PRE_SIGN_STORAGE);
+        assertPreSignStorageEq(userProxy.preSignStorage(), EMPTY_PRE_SIGN_STORAGE);
     }
 
     function testPreSignHooks_initializedStorage() external {
@@ -228,7 +228,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: no call is done to the zero address (mocks revert)
         // THEN: isPreSignedHooks returns false
         vm.mockCallRevert(
-            address(0),
+            address(EMPTY_PRE_SIGN_STORAGE),
             abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, bytes32(0)),
             "Zero address should not be called"
         );
@@ -462,7 +462,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // GIVEN: they set the pre-sign storage to zero
-        _setPreSignStorage(ZERO_ADDRESS_PRESIGN_STORAGE, user);
+        _setPreSignStorage(EMPTY_PRE_SIGN_STORAGE, user);
 
         // WHEN: execute the pre-signed hook
         // THEN: the hook is not pre-signed anymore

@@ -44,8 +44,6 @@ contract SmartWallet {
 }
 
 contract BaseForkedTest is Test {
-    IPreSignStorage constant ZERO_ADDRESS_PRESIGN_STORAGE = IPreSignStorage(address(0));
-
     // Nothing special about this block, it's the latest at the time of writing.
     uint256 constant MAINNET_FORKED_BLOCK = 22947477;
 
@@ -63,6 +61,7 @@ contract BaseForkedTest is Test {
     SmartWallet smartWallet;
     address smartWalletProxyAddr;
     COWShed smartWalletProxy;
+    IPreSignStorage EMPTY_PRE_SIGN_STORAGE;
 
     function setUp() public virtual {
         ForkedRpc.forkEthereumMainnetAtBlock(vm, MAINNET_FORKED_BLOCK);
@@ -80,6 +79,8 @@ contract BaseForkedTest is Test {
         userProxyAddr = factory.proxyOf(user.addr);
         userProxy = COWShed(payable(userProxyAddr));
         _initializeUserProxy(user);
+
+        EMPTY_PRE_SIGN_STORAGE = userProxy.EMPTY_PRE_SIGN_STORAGE();
 
         smartWallet = new SmartWallet(user.addr);
         smartWalletAddr = address(smartWallet);

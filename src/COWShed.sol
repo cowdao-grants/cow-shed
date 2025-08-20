@@ -23,6 +23,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     event PreSignStorageChanged(address indexed newStorage);
 
     string public constant VERSION = "1.0.1";
+    IPreSignStorage public constant EMPTY_PRE_SIGN_STORAGE = IPreSignStorage(address(0));
 
     bytes32 internal constant domainTypeHash =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -100,7 +101,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
 
         IPreSignStorage storageContract = _state().preSignStorage;
-        if (address(storageContract) == address(0)) {
+        if (storageContract == EMPTY_PRE_SIGN_STORAGE) {
             revert PreSignStorageNotSet();
         }
         storageContract.setPreSigned(hash, signed);
@@ -186,7 +187,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     function _isPreSignedHash(bytes32 _hash) internal view returns (bool) {
         IPreSignStorage storageContract = _state().preSignStorage;
-        if (address(storageContract) == address(0)) {
+        if (storageContract == EMPTY_PRE_SIGN_STORAGE) {
             return false; // If no storage contract, nothing is presigned
         }
         return storageContract.isPreSigned(_hash);
