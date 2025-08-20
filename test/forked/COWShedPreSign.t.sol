@@ -524,4 +524,21 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
+
+    function testExecutePreSignedHooks_revertsAfterHookExpires() external {
+        // GIVEN: a hook with an expired deadline
+        Call[] memory calls = new Call[](1);
+        calls[0] = callWithValue;
+        uint256 expiredDeadline = block.timestamp - 1; // expired deadline
+        bytes32 nonce = "1";
+
+        // GIVEN: user pre-signs the expired hook
+        _resetPreSignStorage(user);
+        _presignForProxy(calls, nonce, expiredDeadline, true, user);
+
+        // WHEN: execute the pre-signed hook
+        // THEN: It reverts because the hook has expired
+        vm.expectRevert(LibAuthenticatedHooks.DeadlineElapsed.selector);
+        userProxy.executePreSignedHooks(calls, nonce, expiredDeadline);
+    }
 }
