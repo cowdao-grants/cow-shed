@@ -9,6 +9,8 @@ import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 
+event PreSignStorageChanged(address indexed newStorage);
+
 contract ForkedCOWShedPreSignTest is BaseForkedTest {
     Stub stub;
     Call callWithValue;
@@ -105,7 +107,10 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // GIVEN: user never set the pre-sign storage
 
         // WHEN: setting the pre-sign storage to zero
+        // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
+        vm.expectEmit(true, true, false, false);
+        emit PreSignStorageChanged(address(0));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(ZERO_ADDRESS_PRESIGN_STORAGE);
 
         // THEN: the returned storage is the zero-address
@@ -119,8 +124,11 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // GIVEN: user never set the pre-sign storage
 
         // WHEN: setting the pre-sign storage to some address
+        // THEN: An event with the pre-sign storage address is emitted
         IPreSignStorage presignStorage = IPreSignStorage(makeAddr("presignStorage"));
         vm.prank(user.addr);
+        vm.expectEmit(true, true, false, false);
+        emit PreSignStorageChanged(address(presignStorage));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(presignStorage);
 
         // THEN: returns the presignStorage
@@ -133,7 +141,10 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         _setPreSignStorage(IPreSignStorage(makeAddr("storageAddress")), user);
 
         // WHEN: setting the pre-sign storage to zero
+        // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
+        vm.expectEmit(true, true, false, false);
+        emit PreSignStorageChanged(address(0));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(ZERO_ADDRESS_PRESIGN_STORAGE);
 
         // THEN: returns the zero-address
@@ -194,8 +205,11 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         _setPreSignStorage(storageAddressOld, user);
 
         // WHEN: setting the pre-sign storage to a new address
+        // THEN: An event with the new storage address is emitted
         IPreSignStorage storageAddressNew = IPreSignStorage(makeAddr("storageAddressNew"));
         vm.prank(user.addr);
+        vm.expectEmit(true, true, false, false);
+        emit PreSignStorageChanged(address(storageAddressNew));
         userProxy.setPreSignStorage(storageAddressNew);
 
         // THEN: returns the new address
