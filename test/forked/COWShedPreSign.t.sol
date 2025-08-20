@@ -431,7 +431,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         uint256 deadline = _deadline();
         bytes32 nonce = "1";
 
-        // GIVEN: A user executes has already executed a pre-signed hook
+        // GIVEN: A user has already executed a pre-signed hook
         _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
