@@ -89,14 +89,6 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
         return _getPreSignStorage();
     }
 
-    function _isPreSignedHash(bytes32 _hash) internal view returns (bool) {
-        IPreSignStorage storageContract = _state().preSignStorage;
-        if (address(storageContract) == address(0)) {
-            return false; // If no storage contract, nothing is presigned
-        }
-        return storageContract.isPreSigned(_hash);
-    }
-
     /// @inheritdoc ICOWAuthHook
     function isPreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
         bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
@@ -190,5 +182,13 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     function _executeCalls(Call[] calldata calls, bytes32 nonce) internal {
         _useNonce(nonce);
         LibAuthenticatedHooks.executeCalls(calls);
+    }
+
+    function _isPreSignedHash(bytes32 _hash) internal view returns (bool) {
+        IPreSignStorage storageContract = _state().preSignStorage;
+        if (address(storageContract) == address(0)) {
+            return false; // If no storage contract, nothing is presigned
+        }
+        return storageContract.isPreSigned(_hash);
     }
 }
