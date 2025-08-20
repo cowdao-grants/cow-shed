@@ -6,6 +6,7 @@ import {BaseForkedTest} from "./BaseForkedTest.sol";
 import {COWShed, COWShedStorage, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
 
+import {LibAuthenticatedHooksCalldataProxy} from "../lib/LibAuthenticatedHooksCalldataProxy.sol";
 import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 
@@ -192,9 +193,16 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user initialized the pre-sign storage
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
 
         // WHEN: execute pre-signed the hook
+        // THEN: A call to the storage is made
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage),
+            abi.encodeWithSelector(IPreSignStorage.setPreSigned.selector, expectedHash, true),
+            1
+        );
         vm.prank(user.addr);
         userProxy.preSignHooks(calls, nonce, deadline, true);
 
@@ -254,16 +262,18 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
         bytes32 nonce = "1";
+        IPreSignStorage presignStorage = userProxy.preSignStorage();
 
         // GIVEN: user never set the pre-sign storage
 
         // WHEN: check if the hook is pre-signed
-        // THEN: no call is done to the zero address (mocks revert)
+        // THEN: no call is done to the zero address
         // THEN: isPreSignedHooks returns false
-        vm.mockCallRevert(
-            address(EMPTY_PRE_SIGN_STORAGE),
-            abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, bytes32(0)),
-            "Zero address should not be called"
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage),
+            abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash),
+            0 // no calls expected
         );
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is not pre-signed");
     }
@@ -275,23 +285,36 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed a hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // WHEN: check if the hook is pre-signed
+        // THEN: a call to the storage is made
         // THEN: the hook is pre-signed
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         assertTrue(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is not pre-signed");
     }
 
-    function testIsPreSignedHooks_unsigned() external view {
+    function testIsPreSignedHooks_unsigned() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
         bytes32 nonce = "1";
+        IPreSignStorage presignStorage = userProxy.preSignStorage();
 
         // GIVEN: user has not pre-signed a hook
         // WHEN: check if the hook is pre-signed
+        // THEN: no call is made to the pre-sign storage
         // THEN: the hook is not pre-signed
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage),
+            abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash),
+            0 // Expect no calls
+        );
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
     }
 
@@ -302,12 +325,17 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user had a hook signed, and then revoked it
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
         _presignForProxy(calls, nonce, deadline, false, user);
 
         // WHEN: check if the hook is pre-signed
+        // THEN: a call is made to the pre-sign storage
         // THEN: the hook is not pre-signed
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
     }
 
@@ -319,11 +347,15 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce2 = "2";
 
         // GIVEN: user has pre-signed the hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls, nonce1, deadline, true, user);
 
         // WHEN: check if the hook is pre-signed if we change the nonce
         // THEN: the hook is not pre-signed
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce2, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         assertFalse(userProxy.isPreSignedHooks(calls, nonce2, deadline), "hook is pre-signed");
     }
 
@@ -334,13 +366,18 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has not pre-signed the hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
 
         // GIVEN: the user revokes the pre-signed hook
         _presignForProxy(calls, nonce, deadline, false, user);
 
         // WHEN: check if the hook is pre-signed
         // THEN: the hook is not pre-signed
+        // THEN: a call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is pre-signed");
     }
 
@@ -351,12 +388,18 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed the hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // WHEN: check if the hook is pre-signed if we change the deadline
         // THEN: the hook is not pre-signed
-        assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline + 1), "hook is pre-signed");
+        // THEN: a call is made to the pre-sign storage
+        uint256 newDeadline = deadline + 1;
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, newDeadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
+        assertFalse(userProxy.isPreSignedHooks(calls, nonce, newDeadline), "hook is pre-signed");
     }
 
     function testIsPreSignedHooks_signedForDifferentCalls() external {
@@ -369,11 +412,16 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed the hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls1, nonce, deadline, true, user);
 
         // WHEN: check if the hook is pre-signed if we change the calls
         // THEN: the hook is not pre-signed
+        // THEN: a call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls2, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         assertFalse(userProxy.isPreSignedHooks(calls2, nonce, deadline), "hook is pre-signed");
     }
 
@@ -387,11 +435,16 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed hook to send ether to the stub
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // WHEN: execute the pre-signed hook
         // THEN: the hook is executed
+        // THEN: a call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         vm.expectCall(callWithValue.target, callWithValue.callData);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
 
@@ -410,10 +463,14 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has not pre-signed the hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
 
         // WHEN: pre-sign the hook
         // THEN: the call should revert
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
@@ -428,7 +485,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has pre-signed the hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // GIVEN: the user revokes the pre-signed hook
@@ -436,6 +493,11 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
 
         // WHEN: execute the pre-signed hook
         // THEN: the call should revert
+        // THEN: a call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
@@ -450,13 +512,18 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user has not pre-signed hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
 
         // GIVEN: the user revokes the pre-signed hook
         _presignForProxy(calls, nonce, deadline, false, user);
 
         // WHEN: execute the pre-signed hook
         // THEN: the call should revert
+        // THEN: a call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
@@ -471,12 +538,17 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: A user has already executed a pre-signed hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
 
         // WHEN: execute the pre-signed hook
         // THEN: reverts with NonceAlreadyUsed
+        // THEN: a call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         vm.expectRevert(COWShedFactory.NonceAlreadyUsed.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
@@ -499,6 +571,13 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
 
         // WHEN: execute the pre-signed hook
         // THEN: the hook is not pre-signed anymore
+        // THEN: No call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(EMPTY_PRE_SIGN_STORAGE),
+            abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash),
+            0
+        );
         vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
@@ -512,15 +591,20 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         uint256 deadline = _deadline();
         bytes32 nonce = "1";
 
-        // GIVEN: user has pre-signed hook to send ether to the stub
+        // GIVEN: user has pre-signed a hook
         _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, deadline, true, user);
 
         // GIVEN: they re-initialized the pre-sign storage
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
 
         // WHEN: execute the pre-signed hook
         // THEN: the hook is executed
+        // THEN: a call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, deadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
+        );
         vm.expectRevert(COWShed.NotPreSigned.selector);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
     }
@@ -533,11 +617,16 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         bytes32 nonce = "1";
 
         // GIVEN: user pre-signs the expired hook
-        _resetPreSignStorage(user);
+        IPreSignStorage presignStorage = _resetPreSignStorage(user);
         _presignForProxy(calls, nonce, expiredDeadline, true, user);
 
         // WHEN: execute the pre-signed hook
         // THEN: It reverts because the hook has expired
+        // THEN: no call is made to the pre-sign storage
+        bytes32 expectedHash = cproxy.executeHooksMessageHash(calls, nonce, expiredDeadline);
+        vm.expectCall(
+            address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 0
+        );
         vm.expectRevert(LibAuthenticatedHooks.DeadlineElapsed.selector);
         userProxy.executePreSignedHooks(calls, nonce, expiredDeadline);
     }
