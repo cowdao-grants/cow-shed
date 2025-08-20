@@ -5,7 +5,6 @@ import {COWShed} from "./COWShed.sol";
 import {COWShedProxy} from "./COWShedProxy.sol";
 import {COWShedResolver} from "./COWShedResolver.sol";
 import {Call} from "./ICOWAuthHook.sol";
-import {PreSignStateStorage} from "./PreSignStateStorage.sol";
 
 contract COWShedFactory is COWShedResolver {
     error InvalidSignature();
