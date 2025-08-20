@@ -216,7 +216,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertPreSignStorageEq(userProxy.preSignStorage(), storageAddressNew);
     }
 
-    function testIsPreSignedHooks_storageNotSetReturnsFalse() external view {
+    function testIsPreSignedHooks_storageNotSetReturnsFalse() external {
         Call[] memory calls = new Call[](1);
         calls[0] = callWithValue;
         uint256 deadline = _deadline();
@@ -225,7 +225,13 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // GIVEN: user never set the pre-sign storage
 
         // WHEN: check if the hook is pre-signed
-        // THEN: returns false
+        // THEN: no call is done to the zero address (mocks revert)
+        // THEN: isPreSignedHooks returns false
+        vm.mockCallRevert(
+            address(0),
+            abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, bytes32(0)),
+            "Zero address should not be called"
+        );
         assertFalse(userProxy.isPreSignedHooks(calls, nonce, deadline), "hook is not pre-signed");
     }
 
