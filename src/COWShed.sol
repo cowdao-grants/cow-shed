@@ -20,6 +20,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
+    event PreSignStorageChanged(address indexed newStorage);
 
     string public constant VERSION = "1.0.1";
 
@@ -71,14 +72,16 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @inheritdoc ICOWAuthHook
     function resetPreSignStorage() external onlyAdmin returns (IPreSignStorage) {
         PreSignStateStorage storageContract = new PreSignStateStorage(address(this));
-        _setPreSignStorage(storageContract);
-
-        return storageContract;
+        IPreSignStorage newStorage = _setPreSignStorage(storageContract);
+        emit PreSignStorageChanged(address(storageContract));
+        return newStorage;
     }
 
     /// @inheritdoc ICOWAuthHook
     function setPreSignStorage(IPreSignStorage storageContract) external onlyAdmin returns (IPreSignStorage) {
-        return _setPreSignStorage(storageContract);
+        IPreSignStorage newStorage = _setPreSignStorage(storageContract);
+        emit PreSignStorageChanged(address(storageContract));
+        return newStorage;
     }
 
     /// @inheritdoc ICOWAuthHook
