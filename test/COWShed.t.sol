@@ -64,6 +64,19 @@ contract COWShedTest is BaseTest {
         userProxy.executeHooks(calls, nonce, _deadline(), signature);
     }
 
+    function testExecuteHooks_revertsOnInvalidEcdsaSignature() external {
+        Call[] memory calls = new Call[](0);
+        bytes32 nonce = "1337";
+        uint256 deadline = _deadline();
+        bytes memory signature = _signForProxy(calls, nonce, deadline, user);
+
+        // Corrupt signature, to force `ECDSA.recover()` to return the wrong address
+        signature[0] = signature[0] ^ 0x01;
+
+        vm.expectRevert(LibAuthenticatedHooks.InvalidSignature.selector);
+        userProxy.executeHooks(calls, nonce, deadline, signature);
+    }
+
     function testExecuteHooksDeadline() external {
         Call[] memory calls = new Call[](1);
         calls[0] = Call({target: address(0), value: 0, allowFailure: false, callData: hex"0011", isDelegateCall: false});
@@ -247,6 +260,14 @@ contract COWShedTest is BaseTest {
         smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
 
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
+    }
+
+    function testExecuteHooks_revertsForInvalidSmartAccountSignature() external {
+        Call[] memory calls = new Call[](0);
+        bytes32 nonce = "1337";
+        bytes memory sig = "invalid";
+        vm.expectRevert(COWShed.InvalidSignature.selector);
+        smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
     }
 
     function testIsPreSignedHook() external {
