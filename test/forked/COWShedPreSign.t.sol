@@ -445,7 +445,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         vm.expectCall(
             address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
         );
-        vm.expectCall(callWithValue.target, callWithValue.callData);
+        vm.expectCall(callWithValue.target, callWithValue.value, callWithValue.callData);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
 
         // THEN: the proxy sent ether to the stub
