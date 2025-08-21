@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import {Stub} from "../lib/Stub.sol";
-import {BaseForkedTest} from "./BaseForkedTest.sol";
+import {BaseTest} from "./BaseTest.sol";
 import {COWShed, COWShedStorage, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
-
-import {LibAuthenticatedHooksCalldataProxy} from "../lib/LibAuthenticatedHooksCalldataProxy.sol";
 import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
+import {Stub} from "test/lib/Stub.sol";
 
 event PreSignStorageChanged(address indexed newStorage);
 
-contract ForkedCOWShedPreSignTest is BaseForkedTest {
+contract ForkedCOWShedPreSignTest is BaseTest {
     Stub stub;
     Call callWithValue;
     Call callWillRevert;
