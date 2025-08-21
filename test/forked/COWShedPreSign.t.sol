@@ -132,7 +132,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // WHEN: setting the pre-sign storage to zero
         // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(address(userProxy));
         emit PreSignStorageChanged(address(EMPTY_PRE_SIGN_STORAGE));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(EMPTY_PRE_SIGN_STORAGE);
 
@@ -150,7 +150,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: An event with the pre-sign storage address is emitted
         IPreSignStorage presignStorage = IPreSignStorage(makeAddr("presignStorage"));
         vm.prank(user.addr);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(address(userProxy));
         emit PreSignStorageChanged(address(presignStorage));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(presignStorage);
 
@@ -166,7 +166,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // WHEN: setting the pre-sign storage to zero
         // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(address(userProxy));
         emit PreSignStorageChanged(address(EMPTY_PRE_SIGN_STORAGE));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(EMPTY_PRE_SIGN_STORAGE);
 
@@ -249,7 +249,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: An event with the new storage address is emitted
         IPreSignStorage storageAddressNew = IPreSignStorage(makeAddr("storageAddressNew"));
         vm.prank(user.addr);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(address(userProxy));
         emit PreSignStorageChanged(address(storageAddressNew));
         userProxy.setPreSignStorage(storageAddressNew);
 
