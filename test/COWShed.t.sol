@@ -70,7 +70,7 @@ contract COWShedTest is BaseTest {
         uint256 deadline = _deadline();
         bytes memory signature = _signForProxy(calls, nonce, deadline, user);
 
-        // Invalidate signature.
+        // Corrupt signature, to force `ECDSA.recover()` to return the wrong address
         unchecked {
             // Unchecked: overflowing is intended behavior.
             signature[0] = bytes1(uint8(signature[0]) + 1);
