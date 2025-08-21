@@ -71,10 +71,7 @@ contract COWShedTest is BaseTest {
         bytes memory signature = _signForProxy(calls, nonce, deadline, user);
 
         // Corrupt signature, to force `ECDSA.recover()` to return the wrong address
-        unchecked {
-            // Unchecked: overflowing is intended behavior.
-            signature[0] = bytes1(uint8(signature[0]) + 1);
-        }
+        signature[0] = signature[0] ^ 0x01;
 
         vm.expectRevert(LibAuthenticatedHooks.InvalidSignature.selector);
         userProxy.executeHooks(calls, nonce, deadline, signature);
