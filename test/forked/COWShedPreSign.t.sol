@@ -84,6 +84,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // GIVEN: user never initialized the pre-sign storage
 
         // WHEN: initializing the pre-sign storage
+        // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
         IPreSignStorage storageReturned = userProxy.resetPreSignStorage();
 
@@ -113,6 +114,19 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: the pre-sign storage matches the one returned in the reset function
         IPreSignStorage storageAddressNew = userProxy.preSignStorage();
         assertPreSignStorageEq(storageAddressNew, storageReturned);
+    }
+
+    function testResetPreSignStorage_emitsEvent() external {
+        // GIVEN: user never initialized the pre-sign storage
+
+        // WHEN: initializing the pre-sign storage
+        // THEN: An event with the newly deployed contract is emitted
+        uint256 nonce = vm.getNonce(address(userProxy));
+        address expectedStorageAddress = vm.computeCreateAddress(address(userProxy), nonce);
+        vm.prank(user.addr);
+        vm.expectEmit(address(userProxy));
+        emit PreSignStorageChanged(expectedStorageAddress);
+        userProxy.resetPreSignStorage();
     }
 
     function testSetPreSignStorage_unauthorized() external {
