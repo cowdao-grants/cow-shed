@@ -39,11 +39,13 @@ contract ForkedCOWShedFactoryTest is BaseForkedTest {
         assertGt(expectedProxyAddress.code.length, 0, "expectedProxyAddress code is still empty");
     }
 
-    function testForwardResolve() external view {
+    function testForwardResolve() external {
+        factory.initializeEns(user.addr);
         _assertForwardResolve(user.addr, userProxyAddr);
     }
 
-    function testReverseResolve() external view {
+    function testReverseResolve() external {
+        factory.initializeEns(user.addr);
         _assertReverseResolve(user.addr, userProxyAddr);
     }
 

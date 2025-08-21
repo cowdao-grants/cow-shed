@@ -67,14 +67,7 @@ contract COWShedFactory is COWShedResolver {
         bytes calldata signature
     ) external {
         address proxy = proxyOf(user);
-        // initialize the proxy
-        bool newlyDeployed = _initializeProxy(user, proxy, true);
-
-        // set ens records if it is a newly deployed proxy
-        if (newlyDeployed) {
-            // initialize the ens state, dont care if it fails, hence, ignoring the return value
-            _initializeEns(user, proxy);
-        }
+        _initializeProxy(user, proxy, false);
 
         // execute the hooks, the authorization checks are implemented in the
         // COWShed.executeHooks function

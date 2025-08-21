@@ -39,7 +39,7 @@ contract DeployTest is Test {
         // These addresses are expected to change only if the contract code
         // changes.
         address officialCowShedAddress = 0xE0d6B0ce008F5f1224A491D286F03c3CF2bF6609;
-        address officialFactoryAddress = 0xfed1b97Be5D12a52cA7Af423aC9Bb495A6F522d3;
+        address officialFactoryAddress = 0xcA7481AE4bc9a789ccF0FF6c384ca614dC2aEfD9;
 
         DeployScript.Deployment memory deployment = script.deploy(DEPLOYED_ENS);
 
