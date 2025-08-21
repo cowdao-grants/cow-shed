@@ -73,21 +73,21 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @inheritdoc ICOWAuthHook
     function resetPreSignStorage() external onlyAdmin returns (IPreSignStorage) {
         PreSignStateStorage storageContract = new PreSignStateStorage(address(this));
-        IPreSignStorage newStorage = _setPreSignStorage(storageContract);
+        _state().preSignStorage = storageContract;
         emit PreSignStorageChanged(address(storageContract));
-        return newStorage;
+        return storageContract;
     }
 
     /// @inheritdoc ICOWAuthHook
     function setPreSignStorage(IPreSignStorage storageContract) external onlyAdmin returns (IPreSignStorage) {
-        IPreSignStorage newStorage = _setPreSignStorage(storageContract);
+        _state().preSignStorage = storageContract;
         emit PreSignStorageChanged(address(storageContract));
-        return newStorage;
+        return storageContract;
     }
 
     /// @inheritdoc ICOWAuthHook
     function preSignStorage() external view returns (IPreSignStorage) {
-        return _getPreSignStorage();
+        return _state().preSignStorage;
     }
 
     /// @inheritdoc ICOWAuthHook
