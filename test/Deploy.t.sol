@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
 import {DeployScript, SALT} from "script/Deploy.s.sol";
 import {COWShed, COWShedFactory} from "src/COWShedFactory.sol";
+
+function factoryCreationCode(Vm vm, address cowShed, string memory baseEns) pure returns (bytes memory) {
+    bytes32 bName = LibString.toSmallString(baseEns);
+    bytes32 bNode = vm.ensNamehash(baseEns);
+
+    return abi.encodePacked(type(COWShedFactory).creationCode, abi.encode(cowShed, bName, bNode));
+}
 
 contract DeployTest is Test {
     string constant TEST_ENS = "base ENS";
@@ -20,7 +27,7 @@ contract DeployTest is Test {
     function testUsesCreate2() external {
         address expectedCowShedAddress = vm.computeCreate2Address(SALT, keccak256(type(COWShed).creationCode));
         address expectedFactoryAddress =
-            vm.computeCreate2Address(SALT, keccak256(factoryCreationCode(expectedCowShedAddress, TEST_ENS)));
+            vm.computeCreate2Address(SALT, keccak256(factoryCreationCode(vm, expectedCowShedAddress, TEST_ENS)));
 
         DeployScript.Deployment memory deployment = script.deploy(TEST_ENS);
 
@@ -38,12 +45,5 @@ contract DeployTest is Test {
 
         assertEq(address(deployment.cowShed), officialCowShedAddress);
         assertEq(address(deployment.factory), officialFactoryAddress);
-    }
-
-    function factoryCreationCode(address cowShed, string memory baseEns) private pure returns (bytes memory) {
-        bytes32 bName = LibString.toSmallString(baseEns);
-        bytes32 bNode = vm.ensNamehash(baseEns);
-
-        return abi.encodePacked(type(COWShedFactory).creationCode, abi.encode(cowShed, bName, bNode));
     }
 }
