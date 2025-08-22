@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
+import {IPreSignStorage} from "./IPreSignStorage.sol";
 import {LibBitmap} from "solady/utils/LibBitmap.sol";
 
 /// @dev bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1)
@@ -14,12 +15,13 @@ contract COWShedStorage {
     using LibBitmap for LibBitmap.Bitmap;
 
     error NonceAlreadyUsed();
+    error PreSignStorageNotSet();
 
     struct State {
         bool initialized;
         address trustedExecutor;
+        IPreSignStorage preSignStorage;
         LibBitmap.Bitmap nonces;
-        mapping(bytes32 => bool) presignedHashes;
     }
 
     bytes32 internal constant STATE_STORAGE_SLOT = keccak256("COWShed.State");
@@ -42,13 +44,5 @@ contract COWShedStorage {
 
     function _isNonceUsed(bytes32 _nonce) internal view returns (bool) {
         return _state().nonces.get(uint256(_nonce));
-    }
-
-    function _preSign(bytes32 _hash, bool _signed) internal {
-        _state().presignedHashes[_hash] = _signed;
-    }
-
-    function _isPreSigned(bytes32 _hash) internal view returns (bool) {
-        return _state().presignedHashes[_hash];
     }
 }
