@@ -3,7 +3,9 @@ pragma solidity ^0.8.25;
 
 import {COWShedStorage, IMPLEMENTATION_STORAGE_SLOT} from "./COWShedStorage.sol";
 import {Call, ICOWAuthHook} from "./ICOWAuthHook.sol";
+import {IPreSignStorage} from "./IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
+import {PreSignStateStorage} from "./PreSignStateStorage.sol";
 import {REVERSE_REGISTRAR} from "./ens.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
@@ -17,8 +19,10 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
     event TrustedExecutorChanged(address previousExecutor, address newExecutor);
     event Upgraded(address indexed implementation);
+    event PreSignStorageChanged(address indexed newStorage);
 
     string public constant VERSION = "1.0.1";
+    IPreSignStorage public constant EMPTY_PRE_SIGN_STORAGE = IPreSignStorage(address(0));
 
     bytes32 internal constant domainTypeHash =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -66,15 +70,40 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     }
 
     /// @inheritdoc ICOWAuthHook
-    function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
-        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
-        _preSign(hash, signed);
+    function resetPreSignStorage() external onlyAdmin returns (IPreSignStorage) {
+        PreSignStateStorage storageContract = new PreSignStateStorage(address(this));
+        _state().preSignStorage = storageContract;
+        emit PreSignStorageChanged(address(storageContract));
+        return storageContract;
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function setPreSignStorage(IPreSignStorage storageContract) external onlyAdmin returns (IPreSignStorage) {
+        _state().preSignStorage = storageContract;
+        emit PreSignStorageChanged(address(storageContract));
+        return storageContract;
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function preSignStorage() external view returns (IPreSignStorage) {
+        return _state().preSignStorage;
     }
 
     /// @inheritdoc ICOWAuthHook
     function isPreSignedHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline) external view returns (bool) {
         bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
-        return _isPreSigned(hash);
+        return _isPreSignedHash(hash);
+    }
+
+    /// @inheritdoc ICOWAuthHook
+    function preSignHooks(Call[] calldata calls, bytes32 nonce, uint256 deadline, bool signed) external onlyAdmin {
+        bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
+
+        IPreSignStorage storageContract = _state().preSignStorage;
+        if (storageContract == EMPTY_PRE_SIGN_STORAGE) {
+            revert PreSignStorageNotSet();
+        }
+        storageContract.setPreSigned(hash, signed);
     }
 
     /// @inheritdoc ICOWAuthHook
@@ -83,7 +112,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
 
         bytes32 hash = LibAuthenticatedHooks.executeHooksMessageHash(calls, nonce, deadline);
 
-        if (!_isPreSigned(hash)) {
+        if (!_isPreSignedHash(hash)) {
             revert NotPreSigned();
         }
 
@@ -153,5 +182,13 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     function _executeCalls(Call[] calldata calls, bytes32 nonce) internal {
         _useNonce(nonce);
         LibAuthenticatedHooks.executeCalls(calls);
+    }
+
+    function _isPreSignedHash(bytes32 _hash) internal view returns (bool) {
+        IPreSignStorage storageContract = _state().preSignStorage;
+        if (storageContract == EMPTY_PRE_SIGN_STORAGE) {
+            return false; // If no storage contract, nothing is presigned
+        }
+        return storageContract.isPreSigned(_hash);
     }
 }

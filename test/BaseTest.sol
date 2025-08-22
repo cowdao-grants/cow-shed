@@ -7,12 +7,14 @@ import {LibString} from "solady/utils/LibString.sol";
 import {COWShed, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
+import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 import {ENS, IAddrResolver, INameResolver} from "src/ens.sol";
 import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
 
 /// @dev Simple single owner smart wallet account that will verify signatures against
 ///      pre-approved and stored signatures for given hashes.
+
 contract SmartWallet {
     error OnlyOwner();
 
@@ -55,6 +57,7 @@ contract BaseTest is Test {
     SmartWallet smartWallet;
     address smartWalletProxyAddr;
     COWShed smartWalletProxy;
+    IPreSignStorage EMPTY_PRE_SIGN_STORAGE;
 
     function setUp() public virtual {
         DeployScript s = new DeployScript();
@@ -68,6 +71,8 @@ contract BaseTest is Test {
         userProxyAddr = factory.proxyOf(user.addr);
         userProxy = COWShed(payable(userProxyAddr));
         _initializeUserProxy(user);
+
+        EMPTY_PRE_SIGN_STORAGE = userProxy.EMPTY_PRE_SIGN_STORAGE();
 
         smartWallet = new SmartWallet(user.addr);
         smartWalletAddr = address(smartWallet);
@@ -132,6 +137,25 @@ contract BaseTest is Test {
         cowShed.preSignHooks(calls, nonce, deadline, signed);
     }
 
+    function _setPreSignStorage(IPreSignStorage storageContract, Vm.Wallet memory _wallet)
+        internal
+        returns (IPreSignStorage)
+    {
+        address proxy = factory.proxyOf(_wallet.addr);
+        COWShed cowShed = COWShed(payable(proxy));
+
+        vm.prank(_wallet.addr);
+        return cowShed.setPreSignStorage(storageContract);
+    }
+
+    function _resetPreSignStorage(Vm.Wallet memory _wallet) internal returns (IPreSignStorage) {
+        address proxy = factory.proxyOf(_wallet.addr);
+        COWShed cowShed = COWShed(payable(proxy));
+
+        vm.prank(_wallet.addr);
+        return cowShed.resetPreSignStorage();
+    }
+
     function _signWithSmartWalletForProxy(
         Call[] memory calls,
         bytes32 nonce,
@@ -169,5 +193,17 @@ contract BaseTest is Test {
 
     function _deadline() internal view returns (uint256) {
         return block.timestamp + 1 hours;
+    }
+
+    // PreSignStorage assertion helpers
+    function assertPreSignStorageEq(IPreSignStorage expected, IPreSignStorage actual, string memory message)
+        internal
+        pure
+    {
+        assertEq(address(expected), address(actual), message);
+    }
+
+    function assertPreSignStorageEq(IPreSignStorage expected, IPreSignStorage actual) internal pure {
+        assertPreSignStorageEq(expected, actual, "");
     }
 }
