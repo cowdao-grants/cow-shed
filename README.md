@@ -43,20 +43,10 @@ As `cow-shed` makes use of determinstic deployment, it has the same deployment a
 
 ### Tests
 
-Fork testing is only used for the forward/reverse resolution testing of the ENS names for the proxies.
-
 To run all the tests, execute the following command:
 
 ```bash
 forge test
-```
-
-By default, it uses a free RPC for testing. To use your own, set the `MAINNET_ARCHIVE_NODE_URL` environment variable.
-
-You can also run only local tests with:
-
-```bash
-forge test --no-match-contract 'Forked*'
 ```
 
 ### Examples
