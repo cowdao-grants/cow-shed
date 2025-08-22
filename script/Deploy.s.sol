@@ -2,7 +2,6 @@
 pragma solidity ^0.8.25;
 
 import {Script} from "forge-std/Script.sol";
-import {LibString} from "solady/utils/LibString.sol";
 
 import {COWShed, COWShedFactory} from "src/COWShedFactory.sol";
 
@@ -14,18 +13,15 @@ contract DeployScript is Script {
         COWShedFactory factory;
     }
 
-    function run(string calldata baseEns) external virtual {
-        deploy(baseEns);
+    function run() external virtual {
+        deploy();
     }
 
-    function deploy(string calldata baseEns) public returns (Deployment memory) {
-        bytes32 bName = LibString.toSmallString(baseEns);
-        bytes32 bNode = vm.ensNamehash(baseEns);
-
+    function deploy() public returns (Deployment memory) {
         vm.broadcast();
         COWShed cowShed = new COWShed{salt: SALT}();
         vm.broadcast();
-        COWShedFactory factory = new COWShedFactory{salt: SALT}(address(cowShed), bName, bNode);
+        COWShedFactory factory = new COWShedFactory{salt: SALT}(address(cowShed));
         return Deployment({cowShed: cowShed, factory: factory});
     }
 }

@@ -4,7 +4,6 @@ pragma solidity ^0.8.25;
 import {BaseTest} from "./BaseTest.sol";
 import {COWShed, Call} from "src/COWShed.sol";
 import {COWShedProxy} from "src/COWShedProxy.sol";
-import {ENS, REVERSE_REGISTRAR} from "src/ens.sol";
 
 contract COWShedProxyTest is BaseTest {
     function testAdmin() external {
@@ -53,11 +52,11 @@ contract COWShedProxyTest is BaseTest {
         vm.expectRevert(COWShedProxy.InvalidInitialization.selector);
         COWShed(payable(address(proxy))).trustedExecuteHooks(new Call[](0));
 
-        COWShed(payable(address(proxy))).initialize(address(factory), true);
+        COWShed(payable(address(proxy))).initialize(address(factory));
         assertImpl(address(proxy), address(cowshed));
 
         // shouldnt initialize again
         vm.expectRevert(COWShed.AlreadyInitialized.selector);
-        COWShed(payable(address(proxy))).initialize(address(factory), true);
+        COWShed(payable(address(proxy))).initialize(address(factory));
     }
 }
