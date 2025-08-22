@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import {Stub} from "../lib/Stub.sol";
-import {BaseForkedTest} from "./BaseForkedTest.sol";
+import {BaseTest} from "./BaseTest.sol";
 import {COWShed, COWShedStorage, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
-
-import {LibAuthenticatedHooksCalldataProxy} from "../lib/LibAuthenticatedHooksCalldataProxy.sol";
 import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
+import {Stub} from "test/lib/Stub.sol";
 
 event PreSignStorageChanged(address indexed newStorage);
 
-contract ForkedCOWShedPreSignTest is BaseForkedTest {
+contract ForkedCOWShedPreSignTest is BaseTest {
     Stub stub;
     Call callWithValue;
     Call callWillRevert;
@@ -84,6 +83,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // GIVEN: user never initialized the pre-sign storage
 
         // WHEN: initializing the pre-sign storage
+        // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
         IPreSignStorage storageReturned = userProxy.resetPreSignStorage();
 
@@ -115,6 +115,19 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         assertPreSignStorageEq(storageAddressNew, storageReturned);
     }
 
+    function testResetPreSignStorage_emitsEvent() external {
+        // GIVEN: user never initialized the pre-sign storage
+
+        // WHEN: initializing the pre-sign storage
+        // THEN: An event with the newly deployed contract is emitted
+        uint256 nonce = vm.getNonce(address(userProxy));
+        address expectedStorageAddress = vm.computeCreateAddress(address(userProxy), nonce);
+        vm.prank(user.addr);
+        vm.expectEmit(address(userProxy));
+        emit PreSignStorageChanged(expectedStorageAddress);
+        userProxy.resetPreSignStorage();
+    }
+
     function testSetPreSignStorage_unauthorized() external {
         // GIVEN: a user that is not the admin
         address notAdmin = makeAddr("notAdmin");
@@ -132,7 +145,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // WHEN: setting the pre-sign storage to zero
         // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(address(userProxy));
         emit PreSignStorageChanged(address(EMPTY_PRE_SIGN_STORAGE));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(EMPTY_PRE_SIGN_STORAGE);
 
@@ -150,7 +163,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: An event with the pre-sign storage address is emitted
         IPreSignStorage presignStorage = IPreSignStorage(makeAddr("presignStorage"));
         vm.prank(user.addr);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(address(userProxy));
         emit PreSignStorageChanged(address(presignStorage));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(presignStorage);
 
@@ -166,7 +179,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // WHEN: setting the pre-sign storage to zero
         // THEN: An event with the zero-address is emitted
         vm.prank(user.addr);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(address(userProxy));
         emit PreSignStorageChanged(address(EMPTY_PRE_SIGN_STORAGE));
         IPreSignStorage storageReturned = userProxy.setPreSignStorage(EMPTY_PRE_SIGN_STORAGE);
 
@@ -249,7 +262,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         // THEN: An event with the new storage address is emitted
         IPreSignStorage storageAddressNew = IPreSignStorage(makeAddr("storageAddressNew"));
         vm.prank(user.addr);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(address(userProxy));
         emit PreSignStorageChanged(address(storageAddressNew));
         userProxy.setPreSignStorage(storageAddressNew);
 
@@ -445,7 +458,7 @@ contract ForkedCOWShedPreSignTest is BaseForkedTest {
         vm.expectCall(
             address(presignStorage), abi.encodeWithSelector(IPreSignStorage.isPreSigned.selector, expectedHash), 1
         );
-        vm.expectCall(callWithValue.target, callWithValue.callData);
+        vm.expectCall(callWithValue.target, callWithValue.value, callWithValue.callData);
         userProxy.executePreSignedHooks(calls, nonce, deadline);
 
         // THEN: the proxy sent ether to the stub

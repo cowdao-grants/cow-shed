@@ -45,13 +45,4 @@ contract COWShedStorage {
     function _isNonceUsed(bytes32 _nonce) internal view returns (bool) {
         return _state().nonces.get(uint256(_nonce));
     }
-
-    function _setPreSignStorage(IPreSignStorage _storage) internal returns (IPreSignStorage) {
-        _state().preSignStorage = _storage;
-        return _storage;
-    }
-
-    function _getPreSignStorage() internal view returns (IPreSignStorage) {
-        return _state().preSignStorage;
-    }
 }

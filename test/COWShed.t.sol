@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import {Stub} from "../lib/Stub.sol";
-import {BaseForkedTest} from "./BaseForkedTest.sol";
+import {BaseTest} from "./BaseTest.sol";
 import {COWShed, COWShedStorage, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
-
 import {COWShedProxy} from "src/COWShedProxy.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {Stub} from "test/lib/Stub.sol";
 
-contract ForkedCOWShedTest is BaseForkedTest {
+contract COWShedTest is BaseTest {
     Stub stub;
     Call callWithValue;
     Call callWillRevert;
@@ -63,6 +62,19 @@ contract ForkedCOWShedTest is BaseForkedTest {
         vm.expectCall(address(stub), abi.encodeCall(stub.willRevert, ()));
         vm.expectRevert(Stub.Revert.selector);
         userProxy.executeHooks(calls, nonce, _deadline(), signature);
+    }
+
+    function testExecuteHooks_revertsOnInvalidEcdsaSignature() external {
+        Call[] memory calls = new Call[](0);
+        bytes32 nonce = "1337";
+        uint256 deadline = _deadline();
+        bytes memory signature = _signForProxy(calls, nonce, deadline, user);
+
+        // Corrupt signature, to force `ECDSA.recover()` to return the wrong address
+        signature[0] = signature[0] ^ 0x01;
+
+        vm.expectRevert(LibAuthenticatedHooks.InvalidSignature.selector);
+        userProxy.executeHooks(calls, nonce, deadline, signature);
     }
 
     function testExecuteHooksDeadline() external {
@@ -248,5 +260,13 @@ contract ForkedCOWShedTest is BaseForkedTest {
         smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
 
         assertEq(address(stub).balance, 0.05 ether, "didnt send value as expected");
+    }
+
+    function testExecuteHooks_revertsForInvalidSmartAccountSignature() external {
+        Call[] memory calls = new Call[](0);
+        bytes32 nonce = "1337";
+        bytes memory sig = "invalid";
+        vm.expectRevert(COWShed.InvalidSignature.selector);
+        smartWalletProxy.executeHooks(calls, nonce, _deadline(), sig);
     }
 }

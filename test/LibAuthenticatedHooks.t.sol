@@ -2,13 +2,15 @@
 pragma solidity ^0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {Call} from "src/LibAuthenticatedHooks.sol";
+import {Call, LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
 import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
 
 // mostly testing the eip712 encoding, hashing, etc.
 // it is differentially tested against the output of ethers' code for
 // doing the same. See [./ts/testUtil.ts]
 contract LibAuthenticatedHooksTest is Test {
+    uint256 private constant ECDSA_SIGNATURE_LENGTH = 65;
+
     LibAuthenticatedHooksCalldataProxy cproxy = new LibAuthenticatedHooksCalldataProxy();
 
     function testExecuteHooksHash() external view {
@@ -73,10 +75,27 @@ contract LibAuthenticatedHooksTest is Test {
         );
     }
 
-    function testDecodeEOASignature(bytes32 r, bytes32 s, uint8 v) external view {
+    function testDecodeEOASignature_decodesPackedInput(bytes32 r, bytes32 s, uint8 v) external view {
         (bytes32 ar, bytes32 as_, uint8 av) = cproxy.decodeEOASignature(abi.encodePacked(r, s, v));
         assertEq(ar, r, "!r");
         assertEq(as_, s, "!s");
         assertEq(av, v, "!v");
+    }
+
+    function testDecodeEOASignature_revertsIfSignatureIsTooLong() external {
+        vm.expectRevert(LibAuthenticatedHooks.InvalidSignature.selector);
+        cproxy.decodeEOASignature(new bytes(ECDSA_SIGNATURE_LENGTH + 1));
+    }
+
+    function testDecodeEOASignature_decodesZeroSignatureWithExpectedLength() external view {
+        (bytes32 ar, bytes32 as_, uint8 av) = cproxy.decodeEOASignature(new bytes(ECDSA_SIGNATURE_LENGTH));
+        assertEq(ar, bytes32(0), "!r");
+        assertEq(as_, bytes32(0), "!s");
+        assertEq(av, 0, "!v");
+    }
+
+    function testDecodeEOASignature_revertsIfSignatureIsTooShort() external {
+        vm.expectRevert(LibAuthenticatedHooks.InvalidSignature.selector);
+        cproxy.decodeEOASignature(new bytes(ECDSA_SIGNATURE_LENGTH - 1));
     }
 }

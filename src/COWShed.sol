@@ -3,11 +3,10 @@ pragma solidity ^0.8.25;
 
 import {COWShedStorage, IMPLEMENTATION_STORAGE_SLOT} from "./COWShedStorage.sol";
 import {Call, ICOWAuthHook} from "./ICOWAuthHook.sol";
-import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
-import {REVERSE_REGISTRAR} from "./ens.sol";
-
 import {IPreSignStorage} from "./IPreSignStorage.sol";
+import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
 import {PreSignStateStorage} from "./PreSignStateStorage.sol";
+import {REVERSE_REGISTRAR} from "./ens.sol";
 
 contract COWShed is ICOWAuthHook, COWShedStorage {
     error InvalidSignature();
@@ -73,21 +72,21 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     /// @inheritdoc ICOWAuthHook
     function resetPreSignStorage() external onlyAdmin returns (IPreSignStorage) {
         PreSignStateStorage storageContract = new PreSignStateStorage(address(this));
-        IPreSignStorage newStorage = _setPreSignStorage(storageContract);
+        _state().preSignStorage = storageContract;
         emit PreSignStorageChanged(address(storageContract));
-        return newStorage;
+        return storageContract;
     }
 
     /// @inheritdoc ICOWAuthHook
     function setPreSignStorage(IPreSignStorage storageContract) external onlyAdmin returns (IPreSignStorage) {
-        IPreSignStorage newStorage = _setPreSignStorage(storageContract);
+        _state().preSignStorage = storageContract;
         emit PreSignStorageChanged(address(storageContract));
-        return newStorage;
+        return storageContract;
     }
 
     /// @inheritdoc ICOWAuthHook
     function preSignStorage() external view returns (IPreSignStorage) {
-        return _getPreSignStorage();
+        return _state().preSignStorage;
     }
 
     /// @inheritdoc ICOWAuthHook
