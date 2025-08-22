@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.25;
 
-import {Test, Vm} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
 import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {PreSignStateStorage} from "src/PreSignStateStorage.sol";

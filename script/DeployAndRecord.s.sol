@@ -7,8 +7,8 @@ import {DeployScript} from "./Deploy.s.sol";
 /// deployment information that will be used by the TS library in this
 /// repository.
 contract DeployAndRecordScript is DeployScript {
-    function run(string calldata baseEns) external override {
-        Deployment memory deployment = deploy(baseEns);
+    function run() external override {
+        Deployment memory deployment = deploy();
         bytes memory initCode = vm.getCode("src/COWShedProxy.sol:COWShedProxy");
 
         string memory addrJson = "deploymentAddresses.json";

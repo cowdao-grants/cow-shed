@@ -61,11 +61,10 @@ const deployCowShed = async (provider: ethers.JsonRpcProvider, key: string) => {
   const homeDir = getEnv('HOME');
   const forgePath = join(homeDir, '.foundry', 'bin', 'forge');
   const parentDir = join(__dirname, '..');
-  const ensName = 'cowhooks.eth';
 
   const execPromise = new Promise((resolve, reject) => {
     exec(
-      `${forgePath} script ./script/DeployAndRecord.s.sol:DeployAndRecordScript --sig "run(string)" ${ensName} --broadcast --rpc-url ${
+      `${forgePath} script ./script/DeployAndRecord.s.sol:DeployAndRecordScript --broadcast --rpc-url ${
         provider._getConnection().url
       } --private-key ${key}`,
       { cwd: parentDir },
@@ -100,9 +99,6 @@ const deployCowShed = async (provider: ethers.JsonRpcProvider, key: string) => {
     verifyHasCode(addresses.factory),
     verifyHasCode(addresses.implementation),
   ]);
-
-  console.log('impersonating ENS ownership for', ensName);
-  await setOwnerForEns(provider, ensName, addresses.factory);
 
   await deployWeiroll(provider);
 
@@ -356,7 +352,6 @@ export const getTokenBalance = async (
 
 const SETTLEMENT_CONTRACT = '0x9008D19f58AAbD9eD0D60971565AA8510560ab41';
 const SOLVER = '0x4339889FD9dFCa20a423fbA011e9dfF1C856CAEb';
-const ENS = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e';
 export const USDC_BALANCE_OF_SLOT = 0x09n;
 export const VAULT_RELAYER = '0xC92E8bdf79f0507f65a392b0ab4667716BFE0110';
 export const WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
@@ -418,20 +413,6 @@ export const getSigner = async (provider: ethers.JsonRpcProvider, who: string) =
     await provider.send('anvil_impersonateAccount', [who]);
     return await provider.getSigner(who);
   }
-};
-
-// set owner for given node directly in the ens contract state
-const setOwnerForEns = (
-  provider: ethers.JsonRpcProvider,
-  ens: string,
-  owner: string
-) => {
-  const node = ethers.namehash(ens);
-  const slot = ethers.keccak256(
-    ABI_CODER.encode(['bytes32', 'uint'], [node, 0])
-  );
-  const value = ethers.zeroPadValue(owner, 32);
-  return provider.send('anvil_setStorageAt', [ENS, slot, value]);
 };
 
 export const balanceOfSlot = (mappingSlot: bigint, owner: string) => {

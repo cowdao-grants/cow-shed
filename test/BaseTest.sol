@@ -3,13 +3,11 @@ pragma solidity ^0.8.25;
 
 import {Test, Vm} from "forge-std/Test.sol";
 import {DeployScript} from "script/Deploy.s.sol";
-import {LibString} from "solady/utils/LibString.sol";
 import {COWShed, Call} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
 import {IMPLEMENTATION_STORAGE_SLOT} from "src/COWShedStorage.sol";
 import {IPreSignStorage} from "src/IPreSignStorage.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
-import {ENS, IAddrResolver, INameResolver} from "src/ens.sol";
 import {LibAuthenticatedHooksCalldataProxy} from "test/lib/LibAuthenticatedHooksCalldataProxy.sol";
 
 /// @dev Simple single owner smart wallet account that will verify signatures against
@@ -48,7 +46,6 @@ contract BaseTest is Test {
     address userProxyAddr;
     COWShed userProxy;
     COWShed cowshedImpl;
-    string constant baseEns = "cowhooks.eth";
 
     COWShedFactory factory;
     LibAuthenticatedHooksCalldataProxy cproxy;
@@ -61,7 +58,7 @@ contract BaseTest is Test {
 
     function setUp() public virtual {
         DeployScript s = new DeployScript();
-        DeployScript.Deployment memory deployment = s.deploy(baseEns);
+        DeployScript.Deployment memory deployment = s.deploy();
 
         cowshedImpl = deployment.cowShed;
         factory = deployment.factory;

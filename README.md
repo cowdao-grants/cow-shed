@@ -35,26 +35,6 @@ nonces will save some gas.**
 The system also support smart contracts. In case of contracts, EIP1271 signatures are used to
 authenticate the signed hooks.
 
-The factory also implements an ENS forward and reverse resolver. When the factory is deployed, it is
-also inited with an ENS name e.g. `cowhooks.eth`. For each proxy deployed on mainnet, it transfers the
-ownership of the reverse resolver node `<address>.addr.reverse` back to the factory contract and it is
-also set as the resolver. The reverse resolution will resolve to `<proxy-owner>.cowhooks.eth`.
-
-At the time of initialization it also sets a subnode record for `<user>.cowhooks.eth` that resolves to
-the `<proxy-address>`. This allows user to get their proxy address by doing a simple ens lookup for
-`<user-address>.cowhooks.eth`. The reverse resolver will also allow anyone to lookup the proxy owner
-from the proxy address.
-
-```sh
-# forward resolution
-cast resolve-name <user>.cowhooks.eth
-<proxy-address>
-
-# reverse resolution
-cast lookup-address <proxy-address>
-<user>.cowhooks.eth
-```
-
 ## Usage
 
 ### Deployments
@@ -63,20 +43,10 @@ As `cow-shed` makes use of determinstic deployment, it has the same deployment a
 
 ### Tests
 
-Fork testing is only used for the forward/reverse resolution testing of the ENS names for the proxies.
-
 To run all the tests, execute the following command:
 
 ```bash
 forge test
-```
-
-By default, it uses a free RPC for testing. To use your own, set the `MAINNET_ARCHIVE_NODE_URL` environment variable.
-
-You can also run only local tests with:
-
-```bash
-forge test --no-match-contract 'Forked*'
 ```
 
 ### Examples

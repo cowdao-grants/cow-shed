@@ -3,14 +3,12 @@ pragma solidity ^0.8.25;
 
 import {COWShed} from "./COWShed.sol";
 import {COWShedProxy} from "./COWShedProxy.sol";
-import {COWShedResolver} from "./COWShedResolver.sol";
 import {Call} from "./ICOWAuthHook.sol";
 
-contract COWShedFactory is COWShedResolver {
+contract COWShedFactory {
     error InvalidSignature();
     error NoCodeAtImplementation();
     error NonceAlreadyUsed();
-    error SettingEnsRecordsFailed();
 
     event COWShedBuilt(address user, address shed);
 
@@ -24,36 +22,18 @@ contract COWShedFactory is COWShedResolver {
     /// @notice mapping of proxy address to owner address.
     mapping(address => address) public ownerOf;
 
-    constructor(address impl, bytes32 bName, bytes32 bNode) COWShedResolver(bName, bNode) {
+    constructor(address impl) {
         if (impl.code.length == 0) {
             revert NoCodeAtImplementation();
         }
         implementation = impl;
     }
 
-    /// @notice deploy user proxy if not already deployed, optionally even setup the ens records.
-    ///         if any user wants to opt-out of ens to save on gas, they need to initialize the proxy
-    ///         prior to first hooks execution.
+    /// @notice deploy user proxy if not already deployed.
     /// @param user    - User to deploy the proxy for.
-    /// @param withEns - whether to initialize the ens or not
-    function initializeProxy(address user, bool withEns) external {
+    function initializeProxy(address user) external {
         address proxy = proxyOf(user);
-        _initializeProxy(user, proxy, withEns);
-        if (withEns) {
-            if (!_initializeEns(user, proxy)) {
-                revert SettingEnsRecordsFailed();
-            }
-        }
-    }
-
-    /// @notice initialize the ens records for given user proxy.
-    /// @param user - User to set ens records for.
-    function initializeEns(address user) external {
-        address proxy = proxyOf(user);
-        if (!_initializeEns(user, proxy)) {
-            revert SettingEnsRecordsFailed();
-        }
-        COWShed(payable(proxy)).claimWithResolver(address(this));
+        _initializeProxy(user, proxy);
     }
 
     /// @notice execute hooks on user proxy
@@ -68,13 +48,7 @@ contract COWShedFactory is COWShedResolver {
     ) external {
         address proxy = proxyOf(user);
         // initialize the proxy
-        bool newlyDeployed = _initializeProxy(user, proxy, true);
-
-        // set ens records if it is a newly deployed proxy
-        if (newlyDeployed) {
-            // initialize the ens state, dont care if it fails, hence, ignoring the return value
-            _initializeEns(user, proxy);
-        }
+        _initializeProxy(user, proxy);
 
         // execute the hooks, the authorization checks are implemented in the
         // COWShed.executeHooks function
@@ -97,24 +71,16 @@ contract COWShedFactory is COWShedResolver {
         );
     }
 
-    function _initializeProxy(address user, address proxy, bool claimResolver) internal returns (bool newlyDeployed) {
+    function _initializeProxy(address user, address proxy) internal returns (bool newlyDeployed) {
         // deploy and initialize proxy if it doesnt exist
         if (proxy.code.length == 0) {
             COWShedProxy newProxy = new COWShedProxy{salt: bytes32(uint256(uint160(user)))}(implementation, user);
-            COWShed(payable(proxy)).initialize(address(this), claimResolver);
+            COWShed(payable(proxy)).initialize(address(this));
             emit COWShedBuilt(user, address(newProxy));
 
             // set reverse mapping of proxy to owner
             ownerOf[proxy] = user;
             newlyDeployed = true;
-        }
-    }
-
-    function _initializeEns(address user, address proxy) internal returns (bool success) {
-        // if on mainnet, set the forward and reverse resolution nodes
-        if (block.chainid == 1) {
-            _setReverseNode(user, proxy);
-            success = _setForwardNode(user, proxy);
         }
     }
 }

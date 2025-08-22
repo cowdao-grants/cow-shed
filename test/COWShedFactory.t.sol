@@ -3,35 +3,28 @@ pragma solidity ^0.8.25;
 
 import {BaseTest} from "./BaseTest.sol";
 import {Vm} from "forge-std/Test.sol";
-import {LibString} from "solady/utils/LibString.sol";
 import {COWShed} from "src/COWShed.sol";
 import {COWShedFactory, COWShedProxy} from "src/COWShedFactory.sol";
 import {Call} from "src/LibAuthenticatedHooks.sol";
-import {ENS} from "src/ens.sol";
 
 contract COWShedFactoryTest is BaseTest {
-    error ErrorSettingEns();
-
     function testExposesExpectedCreationCode() external view {
         assertEq(factory.PROXY_CREATION_CODE(), type(COWShedProxy).creationCode);
     }
 
-    function testDeploysExpectedProxyWithNoEns() external {
+    function testDeploysExpectedProxy() external {
         address user = makeAddr("proxy owner");
         address expected = factory.proxyOf(user);
         assertEq(address(expected).code.length, 0);
-        factory.initializeProxy(user, false);
+        factory.initializeProxy(user);
         assertGt(address(expected).code.length, 0);
     }
 
     function testDeploymentFailsIfImplementationHasNoCode() external {
-        bytes32 baseName = "cowhooks.eth";
-        bytes32 baseNode = vm.ensNamehash(LibString.fromSmallString(baseName));
-
         address emptyImplementation = makeAddr("empty COWShed");
         assertEq(emptyImplementation.code, hex"");
         vm.expectRevert(COWShedFactory.NoCodeAtImplementation.selector);
-        new COWShedFactory(emptyImplementation, baseName, baseNode);
+        new COWShedFactory(emptyImplementation);
     }
 
     function testExecuteHooks() external {
@@ -77,14 +70,11 @@ contract COWShedFactoryTest is BaseTest {
         );
     }
 
-    function testInitializeProxyWithoutEns() external {
+    function testInitializeProxy() external {
         address userAddr = makeAddr("user1");
         address proxyAddr = factory.proxyOf(userAddr);
         assertEq(proxyAddr.code.length, 0, "proxy is already initialized");
-        factory.initializeProxy(userAddr, false);
-        //try this.resolveAddr(userAddr) {
-        //    revert("resolution didnt fail");
-        //} catch (bytes memory) {}
+        factory.initializeProxy(userAddr);
         assertGt(proxyAddr.code.length, 0, "proxy is still not initialized");
     }
 }
