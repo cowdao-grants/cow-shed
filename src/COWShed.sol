@@ -20,7 +20,7 @@ contract COWShed is ICOWAuthHook, COWShedStorage {
     event Upgraded(address indexed implementation);
     event PreSignStorageChanged(address indexed newStorage);
 
-    string public constant VERSION = "1.0.1";
+    string public constant VERSION = "1.1.0";
     IPreSignStorage public constant EMPTY_PRE_SIGN_STORAGE = IPreSignStorage(address(0));
 
     bytes32 internal constant domainTypeHash =
