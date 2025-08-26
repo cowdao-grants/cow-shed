@@ -20,8 +20,8 @@ contract COWShedStorage {
     struct State {
         bool initialized;
         address trustedExecutor;
-        IPreSignStorage preSignStorage;
         LibBitmap.Bitmap nonces;
+        IPreSignStorage preSignStorage;
     }
 
     bytes32 internal constant STATE_STORAGE_SLOT = keccak256("COWShed.State");
