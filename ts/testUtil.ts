@@ -41,7 +41,7 @@ const cowShedTypes = {
 const typedDomain = {
   chainId: 1,
   name: 'COWShed',
-  version: '1.1.0',
+  version: '2.0.0',
   verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
 };
 

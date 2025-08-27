@@ -163,7 +163,7 @@ export class CowShedSdk {
   private _getDomain(proxy: string): TypedDataDomain {
     const domain: TypedDataDomain = {
       name: "COWShed",
-      version: "1.1.0",
+      version: "2.0.0",
       chainId: this.options.chainId,
       verifyingContract: proxy,
     };
