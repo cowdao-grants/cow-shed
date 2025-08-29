@@ -2,11 +2,9 @@
 pragma solidity ^0.8.25;
 
 import {Call} from "./ICOWAuthHook.sol";
-import {ECDSA} from "solady/utils/ECDSA.sol";
 
-interface IERC1271 {
-    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4);
-}
+import {IERC1271} from "./IERC1271.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
 
 library LibAuthenticatedHooks {
     error InvalidSignature();
