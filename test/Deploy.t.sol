@@ -16,7 +16,7 @@ contract DeployTest is Test {
     function testUsesCreate2() external {
         address expectedCowShedAddress = vm.computeCreate2Address(SALT, keccak256(type(COWShed).creationCode));
         address expectedFactoryAddress =
-            vm.computeCreate2Address(SALT, keccak256(factoryCreationCode(vm, expectedCowShedAddress)));
+            vm.computeCreate2Address(SALT, keccak256(factoryCreationCode(expectedCowShedAddress)));
 
         DeployScript.Deployment memory deployment = script.deploy();
 
@@ -36,7 +36,7 @@ contract DeployTest is Test {
         assertEq(address(deployment.factory), officialFactoryAddress);
     }
 
-    function factoryCreationCode(Vm vm, address cowShed) internal pure returns (bytes memory) {
+    function factoryCreationCode(address cowShed) internal pure returns (bytes memory) {
         return abi.encodePacked(type(COWShedFactory).creationCode, abi.encode(cowShed));
     }
 }
