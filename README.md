@@ -76,7 +76,7 @@ forge build
 You can simulate the deployment on a network where the contracts aren't present yet with the following command.
 
 ```shell
-forge script 'script/Deploy.s.sol:DeployScript' --sig "run(string)" "hooks.cow.eth" --rpc-url "$RPC_URL" -vvvv
+forge script 'script/Deploy.s.sol:DeployScript' --sig "run()" --rpc-url "$RPC_URL" -vvvv
 ```
 
 If running on a network where the contracts are already deployed, the script is expected to revert.
@@ -88,7 +88,7 @@ You can also run the script without the `--rpc-url` parameter to see the expecte
 The deployment consists of two steps: deploying verified contract code on-chain and saving the compiler standard JSON input.
 
 ```shell
-forge script 'script/Deploy.s.sol:DeployScript' --sig "run(string)" "hooks.cow.eth" --rpc-url "$RPC_URL" -vvvv --private-key "$PK" --broadcast
+forge script 'script/Deploy.s.sol:DeployScript' --sig "run()" --rpc-url "$RPC_URL" -vvvv --private-key "$PK" --broadcast
 ```
 
 #### 4. Verify the deployed contracts
