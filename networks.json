@@ -24,6 +24,10 @@
       "address": "0xa2704cf562ad418bf0453f4b662ebf6a2489ed88",
       "transactionHash": "0x0bdc2e1394c31929786eda6c6028de8bd16f15adc73a6187ed7f96026e5609e6"
     },
+    "56": {
+      "address": "0xa2704cf562ad418bf0453f4b662ebf6a2489ed88",
+      "transactionHash": "0x409827f798120c1e68837464d3ad4b5d31a25c6cd00cc66ba410416d81cdc385"
+    },
     "8453": {
       "address": "0xa2704cf562ad418bf0453f4b662ebf6a2489ed88",
       "transactionHash": "0x986c0d60bb9488b95cfd547a9058e0c6a5714bce30911987f22899066e2a026f"
@@ -53,6 +57,10 @@
     "43114": {
       "address": "0x312f92fe5f1710408b20d52a374fa29e099cfa86",
       "transactionHash": "0xcf5f0c9a40d26d09e497a6ce871df31ca13d8e72b1724d8ba015368cf36068f1"
+    },
+    "56": {
+      "address": "0x312f92fe5f1710408b20d52a374fa29e099cfa86",
+      "transactionHash": "0x76d25671fd1c31044a6cf481df15649fc3503cf5a492de92be8601fee02e259f"
     },
     "8453": {
       "address": "0x312f92fe5f1710408b20d52a374fa29e099cfa86",
