@@ -76,7 +76,7 @@ forge build
 You can simulate the deployment on a network where the contracts aren't present yet with the following command.
 
 ```shell
-forge script 'script/Deploy.s.sol:DeployScript' --sig "run(string)" "hooks.cow.eth" --rpc-url "$RPC_URL" -vvvv
+forge script 'script/Deploy.s.sol:DeployScript' --sig "run()" --rpc-url "$RPC_URL" -vvvv
 ```
 
 If running on a network where the contracts are already deployed, the script is expected to revert.
@@ -88,7 +88,7 @@ You can also run the script without the `--rpc-url` parameter to see the expecte
 The deployment consists of two steps: deploying verified contract code on-chain and saving the compiler standard JSON input.
 
 ```shell
-forge script 'script/Deploy.s.sol:DeployScript' --sig "run(string)" "hooks.cow.eth" --rpc-url "$RPC_URL" -vvvv --private-key "$PK" --broadcast
+forge script 'script/Deploy.s.sol:DeployScript' --sig "run()" --rpc-url "$RPC_URL" -vvvv --private-key "$PK" --broadcast
 ```
 
 #### 4. Verify the deployed contracts
@@ -96,8 +96,9 @@ forge script 'script/Deploy.s.sol:DeployScript' --sig "run(string)" "hooks.cow.e
 ```shell
 export ETHERSCAN_API_KEY='your API key here' # required only for etherscan based explorers
 
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88 COWShed --guess-constructor-args
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x312f92fe5f1710408B20D52A374fa29e099cFA86 COWShedFactory --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x62d3a7ff48f9ae1c28a9552a055482f8c63787f8 COWShed --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x4f4350bf2c74aacd508d598a1ba94ef84378793d COWShedFactory --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x6773d5aa31a1ead34127d564d6e258e66254ebdb COWShedForComposableCoW --guess-constructor-args
 ```
 
 If this doesn't work, visit the block explorer web interface for each of the deployed contract and manually verify through the interface.
