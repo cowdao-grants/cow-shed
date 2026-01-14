@@ -36,8 +36,16 @@ contract DeployTest is Test {
 
         assertEq(address(deployment.cowShed), officialCowShedAddress, "incorrect deployment address for COWShed");
         assertEq(address(deployment.factory), officialFactoryAddress, "incorrect deployment address for COWShedFactory");
-        assertEq(address(deployment.cowShedForComposableCoW), officialCowShedForComposableCoWAddress, "incorrect deployment address for COWShedForComposableCoW");
-        assertEq(address(deployment.factoryForComposableCoW), officialFactoryForComposableCoWAddress, "incorrect deployment address for COWShedFactory for ComposableCoW");
+        assertEq(
+            address(deployment.cowShedForComposableCoW),
+            officialCowShedForComposableCoWAddress,
+            "incorrect deployment address for COWShedForComposableCoW"
+        );
+        assertEq(
+            address(deployment.factoryForComposableCoW),
+            officialFactoryForComposableCoWAddress,
+            "incorrect deployment address for COWShedFactory for ComposableCoW"
+        );
     }
 
     function factoryCreationCode(address cowShed) internal pure returns (bytes memory) {

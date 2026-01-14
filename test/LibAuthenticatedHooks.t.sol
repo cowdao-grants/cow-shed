@@ -18,11 +18,7 @@ contract LibAuthenticatedHooksTest is Test {
         calls[0] =
             Call({target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false});
         calls[1] = Call({
-            target: address(0),
-            callData: hex"00112233",
-            value: 200000000,
-            allowFailure: false,
-            isDelegateCall: false
+            target: address(0), callData: hex"00112233", value: 200000000, allowFailure: false, isDelegateCall: false
         });
 
         bytes32 nonce = bytes32(uint256(1));
@@ -39,11 +35,7 @@ contract LibAuthenticatedHooksTest is Test {
         Call memory call1 =
             Call({target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false});
         Call memory call2 = Call({
-            target: address(0),
-            callData: hex"00112233",
-            value: 200000000,
-            allowFailure: false,
-            isDelegateCall: false
+            target: address(0), callData: hex"00112233", value: 200000000, allowFailure: false, isDelegateCall: false
         });
 
         assertEq(
@@ -63,11 +55,7 @@ contract LibAuthenticatedHooksTest is Test {
         calls[0] =
             Call({target: address(0), callData: hex"1223", value: 20, allowFailure: false, isDelegateCall: false});
         calls[1] = Call({
-            target: address(0),
-            callData: hex"00112233",
-            value: 200000000,
-            allowFailure: false,
-            isDelegateCall: false
+            target: address(0), callData: hex"00112233", value: 200000000, allowFailure: false, isDelegateCall: false
         });
 
         assertEq(
