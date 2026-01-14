@@ -29,11 +29,15 @@ contract DeployTest is Test {
         // changes.
         address officialCowShedAddress = 0x62d3a7Ff48F9ae1c28a9552A055482f8C63787F8;
         address officialFactoryAddress = 0xcf1ADA436dEE1E5923Bd6195aFdb85A4237a6FC0;
+        address officialCowShedForComposableCoWAddress = 0x6773d5aA31A1EAD34127D564D6E258E66254EbDb;
+        address officialFactoryForComposableCoWAddress = 0x4F4350bf2c74aaCD508D598a1ba94EF84378793d;
 
         DeployScript.Deployment memory deployment = script.deploy();
 
         assertEq(address(deployment.cowShed), officialCowShedAddress);
         assertEq(address(deployment.factory), officialFactoryAddress);
+        assertEq(address(deployment.cowShedForComposableCoW), officialCowShedForComposableCoWAddress);
+        assertEq(address(deployment.factoryForComposableCoW), officialFactoryForComposableCoWAddress);
     }
 
     function factoryCreationCode(address cowShed) internal pure returns (bytes memory) {
