@@ -27,13 +27,25 @@ contract DeployTest is Test {
     function testMatchesOfficialAddresses() external {
         // These addresses are expected to change only if the contract code
         // changes.
-        address officialCowShedAddress = 0x62d3a7Ff48F9ae1c28a9552A055482f8C63787F8;
-        address officialFactoryAddress = 0xcf1ADA436dEE1E5923Bd6195aFdb85A4237a6FC0;
+        address officialCowShedAddress = 0xF0D586aB0017fDfE2ACf4AB008B3Ddb2CF50bB09;
+        address officialFactoryAddress = 0xC94F7D71d022e773B0B516841ff867C06f39726B;
+        address officialCowShedForComposableCoWAddress = 0xF0D400089d5b9fACA64E3422AD6614546587cfFB;
+        address officialFactoryForComposableCoWAddress = 0x5E284e80F3bd6A7D80A8500D9c49878028110848;
 
         DeployScript.Deployment memory deployment = script.deploy();
 
-        assertEq(address(deployment.cowShed), officialCowShedAddress);
-        assertEq(address(deployment.factory), officialFactoryAddress);
+        assertEq(address(deployment.cowShed), officialCowShedAddress, "incorrect deployment address for COWShed");
+        assertEq(address(deployment.factory), officialFactoryAddress, "incorrect deployment address for COWShedFactory");
+        assertEq(
+            address(deployment.cowShedForComposableCoW),
+            officialCowShedForComposableCoWAddress,
+            "incorrect deployment address for COWShedForComposableCoW"
+        );
+        assertEq(
+            address(deployment.factoryForComposableCoW),
+            officialFactoryForComposableCoWAddress,
+            "incorrect deployment address for COWShedFactory for ComposableCoW"
+        );
     }
 
     function factoryCreationCode(address cowShed) internal pure returns (bytes memory) {
