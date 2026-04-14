@@ -16,7 +16,7 @@ generate_standard_json_input() {
   local contract_name=$1
   # Note: the address parameter is unused when using
   # `--show-standard-json-input`
-  forge verify-contract --show-standard-json-input 0x0000000000000000000000000000000000000000 "$contract_name" \
+  forge verify-contract --show-standard-json-input 0x0000000000000000000000000000000000000001 "$contract_name" \
     | jq \
     > "$output_folder/$contract_name.json"
 }
@@ -25,4 +25,6 @@ require_installed jq
 require_installed forge
 
 generate_standard_json_input COWShed
+generate_standard_json_input COWShedForComposableCoW
+generate_standard_json_input COWShedProxy
 generate_standard_json_input COWShedFactory
