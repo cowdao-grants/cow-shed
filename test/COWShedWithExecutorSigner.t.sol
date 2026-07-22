@@ -162,17 +162,64 @@ contract COWShedWithExecutorSignerTest is BaseTest {
         assertEq(IERC1271(proxy).isValidSignature(orderDigest, hex""), bytes4(0), "should be invalid after revoke");
     }
 
-    function testIsValidSignatureFailsClosedForEoaExecutor() external {
+    function testIsValidSignatureAcceptsOwnerEcdsaWhenNoExecutorContract() external {
+        // executor is an EOA (no code) -> shed falls back to the owner's own ECDSA signature
         address eoaExecutor = makeAddr("eoaExecutor");
         address proxy = executorFactory.initializeProxy(user.addr, eoaExecutor, SALT_A);
+
+        bytes32 orderDigest = keccak256("some order digest");
+        bytes memory ownerSig = _signHash(orderDigest, user.privateKey);
         assertEq(
-            IERC1271(proxy).isValidSignature(keccak256("x"), hex""),
+            IERC1271(proxy).isValidSignature(orderDigest, ownerSig),
+            LibAuthenticatedHooks.MAGIC_VALUE_1271,
+            "owner ECDSA signature should be accepted"
+        );
+    }
+
+    function testIsValidSignatureRejectsNonOwnerEcdsa() external {
+        address proxy = executorFactory.initializeProxy(user.addr, address(0), SALT_A);
+
+        Vm.Wallet memory stranger = vm.createWallet("stranger");
+        bytes32 orderDigest = keccak256("some order digest");
+        bytes memory strangerSig = _signHash(orderDigest, stranger.privateKey);
+        assertEq(
+            IERC1271(proxy).isValidSignature(orderDigest, strangerSig),
             bytes4(0),
-            "EOA executor should fail closed"
+            "non-owner signature should be rejected"
+        );
+    }
+
+    function testIsValidSignatureRejectsMalformedSignatureWhenNoExecutorContract() external {
+        address proxy = executorFactory.initializeProxy(user.addr, address(0), SALT_A);
+        // empty / malformed signature -> tryRecover yields address(0) -> rejected, no revert
+        assertEq(IERC1271(proxy).isValidSignature(keccak256("x"), hex""), bytes4(0), "empty sig should be rejected");
+        assertEq(
+            IERC1271(proxy).isValidSignature(keccak256("x"), hex"deadbeef"),
+            bytes4(0),
+            "garbage sig should be rejected"
+        );
+    }
+
+    function testExecutorContractIsAuthoritativeOverOwnerEcdsa() external {
+        // when an executor contract is configured, a valid owner ECDSA signature is NOT accepted
+        // unless the executor itself validates it
+        address proxy = executorFactory.initializeProxy(user.addr, address(executor), SALT_A);
+
+        bytes32 orderDigest = keccak256("some order digest");
+        bytes memory ownerSig = _signHash(orderDigest, user.privateKey);
+        assertEq(
+            IERC1271(proxy).isValidSignature(orderDigest, ownerSig),
+            bytes4(0),
+            "owner ECDSA must not bypass a configured executor contract"
         );
     }
 
     // --- helpers -----------------------------------------------------------
+
+    function _signHash(bytes32 hash, uint256 privateKey) internal pure returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
+        return abi.encodePacked(r, s, v);
+    }
 
     function _signForShed(address proxy, Call[] memory calls, bytes32 nonce, uint256 deadline)
         internal
