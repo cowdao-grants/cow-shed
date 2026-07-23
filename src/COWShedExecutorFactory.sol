@@ -5,6 +5,7 @@ import {COWShed} from "./COWShed.sol";
 import {COWShedFactory} from "./COWShedFactory.sol";
 import {COWShedProxy} from "./COWShedProxy.sol";
 import {Call} from "./ICOWAuthHook.sol";
+import {ICOWShedSetup} from "./ICOWShedSetup.sol";
 
 /// @title COWShedExecutorFactory
 /// @notice A COWShedFactory that can deploy proxies preconfigured with a specific trusted
@@ -77,5 +78,84 @@ contract COWShedExecutorFactory is COWShedFactory {
     ///      never collide with the base per-owner salt `bytes32(uint256(uint160(owner)))`.
     function _create2Salt(address owner, address trustedExecutor, bytes32 salt) internal pure returns (bytes32) {
         return keccak256(abi.encode(owner, trustedExecutor, salt));
+    }
+
+    // --- deploy-time setup call --------------------------------------------------------------
+
+    /// @notice deterministic address for a shed preconfigured with a trusted executor and salt,
+    ///         that also runs a one-time setup call on `setupTarget` at deployment.
+    /// @dev The setup target and data are committed into the create2 salt, so a different setup
+    ///      call yields a different address (grief-free): nobody can deploy the shed at this
+    ///      address with a different setup call. A shed created with a setup call therefore has a
+    ///      different address than the plain `proxyOf(owner, trustedExecutor, salt)`.
+    /// @param owner           - The owner/admin of the proxy.
+    /// @param trustedExecutor - The trusted executor the proxy is initialized with.
+    /// @param salt            - Arbitrary salt to allow multiple proxies per (owner, executor).
+    /// @param setupTarget     - Contract called back via `ICOWShedSetup.setup` right after deploy.
+    /// @param setupData       - Data passed to the setup callback (committed into the address).
+    function proxyOf(
+        address owner,
+        address trustedExecutor,
+        bytes32 salt,
+        address setupTarget,
+        bytes calldata setupData
+    ) public view returns (address) {
+        bytes32 initCodeHash = keccak256(abi.encodePacked(PROXY_CREATION_CODE, abi.encode(implementation, owner)));
+        return address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            hex"ff",
+                            address(this),
+                            _setupSalt(owner, trustedExecutor, salt, setupTarget, setupData),
+                            initCodeHash
+                        )
+                    )
+                )
+            )
+        );
+    }
+
+    /// @notice deploy a preconfigured proxy (if not already deployed) and run a one-time setup
+    ///         call on `setupTarget` in the same transaction.
+    /// @dev The setup call is only executed on first deployment (idempotent), so this can be run
+    ///      as a discardable solver pre-interaction. The callback receives the freshly deployed
+    ///      `proxy` address, which it cannot know from `setupData` alone (that data is committed
+    ///      into the proxy address). If the setup call reverts, the whole deployment reverts.
+    /// @return proxy - The address of the (possibly newly) deployed proxy.
+    function initializeProxyWithSetup(
+        address owner,
+        address trustedExecutor,
+        bytes32 salt,
+        address setupTarget,
+        bytes calldata setupData
+    ) public returns (address proxy) {
+        proxy = proxyOf(owner, trustedExecutor, salt, setupTarget, setupData);
+        if (proxy.code.length == 0) {
+            new COWShedProxy{salt: _setupSalt(owner, trustedExecutor, salt, setupTarget, setupData)}(
+                implementation, owner
+            );
+            COWShed(payable(proxy)).initialize(trustedExecutor);
+            emit COWShedBuilt(owner, proxy);
+
+            // set reverse mapping of proxy to owner
+            ownerOf[proxy] = owner;
+
+            // run the one-time setup call, passing the deployed proxy address to the target
+            ICOWShedSetup(setupTarget).setup(proxy, owner, setupData);
+        }
+    }
+
+    /// @dev create2 salt committing to the owner, trusted executor, user salt, and the setup call
+    ///      (target + data). Binding the setup call makes the deployment grief-free.
+    function _setupSalt(
+        address owner,
+        address trustedExecutor,
+        bytes32 salt,
+        address setupTarget,
+        bytes calldata setupData
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(owner, trustedExecutor, salt, setupTarget, keccak256(setupData)));
     }
 }
