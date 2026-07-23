@@ -81,7 +81,7 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
 
     /// @dev Monotonic per-`_wrap` counter that namespaces the bless slots, so a stale blessing
     ///      from an earlier settlement in the same transaction can never be reused.
-    uint256 private transient _epoch;
+    uint256 private transient _blessNonce;
 
     /// @notice One enforceable bundle, supplied by the solver at settle time: the owner-signed
     ///         `(preHooks, order, postHooks)` to run atomically around the fill.
@@ -134,7 +134,7 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
     /// @notice Whether `digest` is blessed for `shed` in the active settlement.
     function isBlessed(address shed, bytes32 digest) public view returns (bool) {
         if (!_inSettlement) return false;
-        return _tload(_blessSlot(_epoch, shed, digest)) == 1;
+        return _tload(_blessSlot(_blessNonce, shed, digest)) == 1;
     }
 
     function isNonceUsed(address shed, uint256 nonce) external view returns (bool) {
@@ -172,8 +172,8 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         uint256 count = bundles.length;
         if (count == 0) revert NoItems();
 
-        uint256 epoch = _epoch + 1;
-        _epoch = epoch;
+        uint256 blessNonce = _blessNonce + 1;
+        _blessNonce = blessNonce;
         _inSettlement = true;
 
         bytes32 cowDomainSeparator = SETTLEMENT.domainSeparator();
@@ -198,9 +198,9 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
             COWShed(payable(prepared[i].shed)).trustedExecuteHooks(bundles[i].preHooks);
         }
 
-        // PASS 3: bless each order digest for this epoch, then descend into settlement.
+        // PASS 3: bless each order digest under this settlement's bless nonce, then descend into settlement.
         for (uint256 i; i < count; ++i) {
-            _tstore(_blessSlot(epoch, prepared[i].shed, prepared[i].digest), 1);
+            _tstore(_blessSlot(blessNonce, prepared[i].shed, prepared[i].digest), 1);
         }
 
         _next(settleData, remainingWrapperData);
@@ -251,8 +251,8 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         return abi.encodePacked(digest, shed, validTo);
     }
 
-    function _blessSlot(uint256 epoch, address shed, bytes32 digest) private pure returns (bytes32) {
-        return keccak256(abi.encode("CowShedHooksWrapper.BLESS", epoch, shed, digest));
+    function _blessSlot(uint256 blessNonce, address shed, bytes32 digest) private pure returns (bytes32) {
+        return keccak256(abi.encode("CowShedHooksWrapper.BLESS", blessNonce, shed, digest));
     }
 
     function _tload(bytes32 slot) private view returns (uint256 v) {
