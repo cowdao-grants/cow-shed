@@ -31,22 +31,28 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
     /// @dev This wrapper isn't the last hop before settlement; the bless window must span only the
     ///      `settle` call this wrapper makes, so it must be the final wrapper in the chain.
     error MustBeFinalWrapper();
+
     /// @dev `_wrap` was re-entered while a settlement it started is still active.
     error Reentrancy();
+
     /// @dev The bundle array is empty; there is nothing to settle.
     error NoItems();
-    /// @dev The bundle array exceeds `MAX_ITEMS`.
-    error TooManyItems();
+
     /// @dev An order's `receiver` is not `address(0)`; it must pay the shed (the order owner).
     error NonZeroReceiver();
+
     /// @dev The bundle signature does not recover to the order owner.
     error BadSignature();
+
     /// @dev The derived shed is not deployed, or its `trustedExecutor` is not this wrapper.
     error ShedNotConfigured();
+
     /// @dev The bundle nonce has already been consumed (or was cancelled by the owner).
     error NonceAlreadyUsed();
+
     /// @dev The order already had a non-zero filled amount before settlement (replay / stale).
     error OrderAlreadyFilled();
+    
     /// @dev After settlement the order's filled amount was below `expectedFill`.
     error OrderNotSettled();
 
@@ -54,7 +60,6 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
     event NonceCancelled(address indexed shed, uint256 nonce);
 
     bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
-    uint256 internal constant MAX_ITEMS = 32;
 
     bytes32 private constant EIP712_DOMAIN_TYPE_HASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -114,7 +119,6 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         Bundle[] memory bundles = abi.decode(wrapperData, (Bundle[]));
         uint256 count = bundles.length;
         if (count == 0) revert NoItems();
-        if (count > MAX_ITEMS) revert TooManyItems();
         for (uint256 i; i < count; ++i) {
             if (bundles[i].order.receiver != address(0)) revert NonZeroReceiver();
         }
@@ -167,7 +171,6 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         Bundle[] memory bundles = abi.decode(wrapperData, (Bundle[]));
         uint256 count = bundles.length;
         if (count == 0) revert NoItems();
-        if (count > MAX_ITEMS) revert TooManyItems();
 
         uint256 epoch = _epoch + 1;
         _epoch = epoch;
