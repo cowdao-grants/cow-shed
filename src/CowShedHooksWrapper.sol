@@ -45,9 +45,6 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
     bytes4 internal constant MAGIC_VALUE_1271 = 0x1626ba7e;
     uint256 internal constant MAX_ITEMS = 32;
 
-    bytes32 private constant T_IN = keccak256("CowShedHooksWrapper.IN");
-    bytes32 private constant T_EPOCH = keccak256("CowShedHooksWrapper.EPOCH");
-
     bytes32 private constant EIP712_DOMAIN_TYPE_HASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 public constant HOOKS_ORDER_TYPE_HASH = keccak256(
@@ -61,6 +58,14 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
 
     /// @notice per-shed nonce bitmap for bundle replay protection.
     mapping(address => LibBitmap.Bitmap) internal _nonces;
+
+    /// @dev Set while a settlement orchestrated by this wrapper is executing. Gates blessings
+    ///      (`isBlessed`) and guards against reentrancy; cleared before the post-hooks run.
+    bool private transient _inSettlement;
+
+    /// @dev Monotonic per-`_wrap` counter that namespaces the bless slots, so a stale blessing
+    ///      from an earlier settlement in the same transaction can never be reused.
+    uint256 private transient _epoch;
 
     /// @dev One enforceable bundle, supplied by the solver at settle time.
     struct HooksOrderExec {
@@ -105,8 +110,8 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
 
     /// @notice Whether `digest` is blessed for `shed` in the active settlement.
     function isBlessed(address shed, bytes32 digest) public view returns (bool) {
-        if (_tload(T_IN) != 1) return false;
-        return _tload(_blessSlot(_tload(T_EPOCH), shed, digest)) == 1;
+        if (!_inSettlement) return false;
+        return _tload(_blessSlot(_epoch, shed, digest)) == 1;
     }
 
     function isNonceUsed(address shed, uint256 nonce) external view returns (bool) {
@@ -137,7 +142,7 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         internal
         override
     {
-        if (_tload(T_IN) != 0) revert Reentrancy();
+        if (_inSettlement) revert Reentrancy();
         if (remainingWrapperData.length != 0) revert MustBeFinalWrapper();
 
         HooksOrderExec[] memory ex = abi.decode(wrapperData, (HooksOrderExec[]));
@@ -145,9 +150,9 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         if (k == 0) revert NoItems();
         if (k > MAX_ITEMS) revert TooManyItems();
 
-        uint256 epoch = _tload(T_EPOCH) + 1;
-        _tstore(T_EPOCH, epoch);
-        _tstore(T_IN, 1);
+        uint256 epoch = _epoch + 1;
+        _epoch = epoch;
+        _inSettlement = true;
 
         bytes32 ds = SETTLEMENT.domainSeparator();
         address[] memory sheds = new address[](k);
@@ -157,6 +162,7 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         // PASS 1: authorize each bundle, freeze its nonce, require the order is unfilled.
         for (uint256 i; i < k; ++i) {
             HooksOrderExec memory e = ex[i];
+            // Make sure the receiver is zero (so the cow-shed's proxy receives it)
             if (e.order.receiver != address(0)) revert NonZeroReceiver();
 
             bytes32 digest = LibCowOrder.hash(e.order, ds);
@@ -183,7 +189,7 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         _next(settleData, remainingWrapperData);
 
         // Close the bless window.
-        _tstore(T_IN, 0);
+        _inSettlement = false;
 
         // PASS 4: verify each order filled, then run its post-hook as the shed.
         for (uint256 i; i < k; ++i) {
