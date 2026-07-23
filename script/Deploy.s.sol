@@ -15,6 +15,9 @@ bytes32 constant SALT = bytes32(0);
 // See https://github.com/cowprotocol/composable-cow
 address constant DEFAULT_COMPOSABLE_COW = 0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74;
 
+// Canonical GPv2Settlement address (same on all supported networks).
+address constant DEFAULT_SETTLEMENT = 0x9008D19f58AAbD9eD0D60971565AA8510560ab41;
+
 contract DeployScript is Script {
     struct Deployment {
         COWShed cowShed;
@@ -41,9 +44,12 @@ contract DeployScript is Script {
         vm.broadcast();
         COWShed cowShedForComposableCoW = new COWShedForComposableCoW{salt: SALT}(composableCoW);
 
-        // Deploy COWShed variant that delegates EIP-1271 signature validation to its trusted executor
+        // Deploy COWShed variant that delegates EIP-1271 signature validation to its trusted
+        // executor, falling back to owner-signed CoW orders when no executor contract is set
+        address cowSettlement = address(vm.envOr("COW_SETTLEMENT", address(DEFAULT_SETTLEMENT)));
+
         vm.broadcast();
-        COWShed cowShedWithExecutorSigner = new COWShedWithExecutorSigner{salt: SALT}();
+        COWShed cowShedWithExecutorSigner = new COWShedWithExecutorSigner{salt: SALT}(cowSettlement);
 
         // Deploy factory
         vm.broadcast();
