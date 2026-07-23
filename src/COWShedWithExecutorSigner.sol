@@ -4,32 +4,42 @@ pragma solidity ^0.8.25;
 import {COWShed} from "./COWShed.sol";
 import {IERC1271} from "./IERC1271.sol";
 import {LibAuthenticatedHooks} from "./LibAuthenticatedHooks.sol";
+import {LibCowOrder} from "./LibCowOrder.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 
 /// @title COWShedWithExecutorSigner
-/// @notice A COWShed variant that is itself an EIP-1271 signer. When a trusted executor
-///         contract is configured it delegates signature validity to it; otherwise it accepts
-///         the owner's own signature over a shed-bound wrapper of the message hash.
+/// @notice A COWShed variant that is itself an EIP-1271 signer for CoW Protocol orders. When a
+///         trusted executor contract is configured it delegates signature validity to it;
+///         otherwise it verifies the owner's own signature over the full, human-readable order,
+///         bound to this shed.
 /// @dev Intended for setups where a manager/wrapper contract (the trusted executor) drives the
 ///      shed and decides which digests the shed will "sign" on-chain (e.g. by blessing a
-///      settlement digest in transient storage), without the owner having to sign every message.
-///      When no executor contract is set, the shed behaves as a general-purpose owner-signed
-///      EIP-1271 smart account (usable with CoW orders or any other 1271-consuming protocol).
+///      settlement digest in transient storage), without the owner having to sign every order.
+///      When no executor contract is set, the shed behaves as an owner-signed smart account: the
+///      owner signs the CoW order (so a wallet shows the real order fields) under the shed's own
+///      domain separator, and the order is carried in the EIP-1271 signature blob and checked to
+///      reconstruct to exactly the digest CoW is settling. Both digests reuse `LibCowOrder`'s
+///      canonical GPv2 `Order` type, differing only in the EIP-712 domain separator.
 contract COWShedWithExecutorSigner is COWShed, IERC1271 {
-    /// @dev EIP-712 type hash for an owner-signed message. An arbitrary EIP-1271 `hash` is
-    ///      wrapped in this struct and hashed under the shed's own domain separator so a
-    ///      signature is only ever valid for THIS shed (see `isValidSignature`).
-    bytes32 internal constant COW_SHED_MESSAGE_TYPE_HASH = keccak256("COWShedMessage(bytes32 hash)");
+    /// @notice GPv2 settlement contract whose domain separator CoW order digests are built under.
+    address public immutable cowSettlement;
+
+    bytes32 private constant EIP712_DOMAIN_TYPE_HASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+
+    constructor(address _cowSettlement) {
+        cowSettlement = _cowSettlement;
+    }
 
     /// @inheritdoc IERC1271
-    /// @dev When a trusted executor *contract* is set, forwards to its `isValidSignature` and
-    ///      lets it be authoritative. When no executor contract is set (unset or an EOA, neither
-    ///      of which can implement EIP-1271), verifies the owner's ECDSA signature over the
-    ///      shed-bound wrapper of `hash` (`COWShedMessage(hash)` under this shed's domain
-    ///      separator). Binding to the shed's domain separator is what prevents a signature from
-    ///      being replayed to the owner's EOA (which would sign the raw hash) or to any other
-    ///      shed the owner controls (different `verifyingContract`). Returns `bytes4(0)`
-    ///      otherwise.
+    /// @dev When a trusted executor *contract* is set, forwards to its `isValidSignature` and lets
+    ///      it be authoritative. When no executor contract is set (unset or an EOA, neither of
+    ///      which can implement EIP-1271), the `signature` must be `abi.encode(GPv2Order, ownerSig)`:
+    ///      the order is reconstructed and required to hash (under the GPv2 domain separator) to
+    ///      exactly `hash`, and `ownerSig` must be the owner's signature over the same order under
+    ///      this shed's domain separator. Binding to the shed's domain separator prevents the
+    ///      signature from being replayed to the owner's EOA (which signs under the GPv2 domain)
+    ///      or to any other shed the owner controls. Returns `bytes4(0)` otherwise.
     function isValidSignature(bytes32 hash, bytes calldata signature)
         external
         view
@@ -41,22 +51,39 @@ contract COWShedWithExecutorSigner is COWShed, IERC1271 {
             return IERC1271(executor).isValidSignature(hash, signature);
         }
 
-        // No executor contract configured: accept the owner's own ECDSA signature, bound to
-        // this shed. `tryRecoverCalldata` returns address(0) for malformed signatures (never
-        // reverts), so an empty/garbage signature simply fails the owner check below.
-        address recovered = ECDSA.tryRecoverCalldata(toSignedMessageHash(hash), signature);
+        // No executor contract configured: verify the owner's signature over the full order.
+        (LibCowOrder.Data memory order, bytes memory ownerSignature) =
+            abi.decode(signature, (LibCowOrder.Data, bytes));
+
+        // The provided order must be exactly the order CoW is settling...
+        if (LibCowOrder.hash(order, cowDomainSeparator()) != hash) {
+            return bytes4(0);
+        }
+
+        // ...and the owner must have signed that same order under THIS shed's domain separator.
+        // `tryRecover` returns address(0) for malformed signatures (never reverts).
+        address recovered = ECDSA.tryRecover(orderSignedHash(order), ownerSignature);
         if (recovered != address(0) && recovered == _admin()) {
             return LibAuthenticatedHooks.MAGIC_VALUE_1271;
         }
         return bytes4(0);
     }
 
-    /// @notice The EIP-712 digest the owner must sign to authorize `hash` for this shed via
-    ///         EIP-1271. Exposed so integrations can construct the signature off-chain.
-    /// @param hash The message hash a consumer passes to `isValidSignature` (e.g. a GPv2 order
-    ///        digest, a Permit2 hash, a login challenge, ...).
-    function toSignedMessageHash(bytes32 hash) public view returns (bytes32) {
-        bytes32 structHash = keccak256(abi.encode(COW_SHED_MESSAGE_TYPE_HASH, hash));
-        return keccak256(abi.encodePacked(hex"1901", domainSeparator(), structHash));
+    /// @notice The GPv2 domain separator that CoW order digests are computed under.
+    function cowDomainSeparator() public view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPE_HASH, keccak256("Gnosis Protocol"), keccak256("v2"), block.chainid, cowSettlement
+            )
+        );
+    }
+
+    /// @notice The digest the owner signs to authorize `order` for this shed via EIP-1271: the
+    ///         CoW order hashed under the shed's own domain separator (reusing `LibCowOrder`'s
+    ///         canonical GPv2 `Order` type). Exposed so integrations can build the signature
+    ///         off-chain.
+    /// @param order The GPv2 order the owner is authorizing.
+    function orderSignedHash(LibCowOrder.Data memory order) public view returns (bytes32) {
+        return LibCowOrder.hash(order, domainSeparator());
     }
 }

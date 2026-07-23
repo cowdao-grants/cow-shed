@@ -9,6 +9,8 @@ import {COWShedProxy} from "src/COWShedProxy.sol";
 import {COWShedWithExecutorSigner} from "src/COWShedWithExecutorSigner.sol";
 import {IERC1271} from "src/IERC1271.sol";
 import {LibAuthenticatedHooks} from "src/LibAuthenticatedHooks.sol";
+import {LibCowOrder} from "src/LibCowOrder.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 /// @dev Minimal trusted-executor stand-in: acts as an EIP-1271 authority (blesses digests)
 ///      and can be pranked as the caller of `trustedExecuteHooks`.
@@ -31,11 +33,12 @@ contract COWShedWithExecutorSignerTest is BaseTest {
 
     bytes32 constant SALT_A = bytes32(uint256(1));
     bytes32 constant SALT_B = bytes32(uint256(2));
+    address constant COW_SETTLEMENT = 0x9008D19f58AAbD9eD0D60971565AA8510560ab41;
 
     function setUp() public override {
         super.setUp();
 
-        executorSignerImpl = new COWShedWithExecutorSigner();
+        executorSignerImpl = new COWShedWithExecutorSigner(COW_SETTLEMENT);
         executorFactory = new COWShedExecutorFactory(address(executorSignerImpl));
         executor = new MockExecutor();
     }
@@ -162,89 +165,111 @@ contract COWShedWithExecutorSignerTest is BaseTest {
         assertEq(IERC1271(proxy).isValidSignature(orderDigest, hex""), bytes4(0), "should be invalid after revoke");
     }
 
-    function testIsValidSignatureAcceptsShedBoundOwnerSignatureWhenNoExecutorContract() external {
-        // executor is an EOA (no code) -> shed falls back to the owner's shed-bound ECDSA signature
+    function testAcceptsOwnerSignedOrderWhenNoExecutorContract() external {
+        // executor is an EOA (no code) -> shed verifies the owner's signature over the order
         address eoaExecutor = makeAddr("eoaExecutor");
         address proxy = executorFactory.initializeProxy(user.addr, eoaExecutor, SALT_A);
 
-        bytes32 orderDigest = keccak256("some order digest");
-        bytes memory ownerSig = _signShedBoundOrder(proxy, orderDigest, user.privateKey);
+        LibCowOrder.Data memory order = _buildOrder(user.addr);
+        bytes32 cowDigest = _cowDigest(proxy, order);
+        bytes memory sig = abi.encode(order, _signOrder(proxy, order, user.privateKey));
+
         assertEq(
-            IERC1271(proxy).isValidSignature(orderDigest, ownerSig),
+            IERC1271(proxy).isValidSignature(cowDigest, sig),
             LibAuthenticatedHooks.MAGIC_VALUE_1271,
-            "shed-bound owner signature should be accepted"
+            "owner-signed order should be accepted"
         );
     }
 
-    function testIsValidSignatureRejectsRawDigestSignature() external {
-        // A signature over the RAW order digest (what the owner's EOA would sign for a direct
-        // CoW order) must NOT validate for the shed - this is the replay vector.
+    function testRejectsOrderNotMatchingHash() external {
+        // the order in the blob must reconstruct to the exact digest CoW passes
         address proxy = executorFactory.initializeProxy(user.addr, address(0), SALT_A);
 
-        bytes32 orderDigest = keccak256("some order digest");
-        bytes memory rawSig = _signHash(orderDigest, user.privateKey);
+        LibCowOrder.Data memory order = _buildOrder(user.addr);
+        bytes memory sig = abi.encode(order, _signOrder(proxy, order, user.privateKey));
+
         assertEq(
-            IERC1271(proxy).isValidSignature(orderDigest, rawSig),
+            IERC1271(proxy).isValidSignature(keccak256("a different order digest"), sig),
             bytes4(0),
-            "raw-digest signature must not be replayable to the shed"
+            "order must match the settled digest"
         );
     }
 
-    function testShedBoundSignatureDoesNotReplayAcrossSheds() external {
+    function testRejectsRawGpv2SignatureReplay() external {
+        // A signature over the raw GPv2 order digest (what the owner's EOA would sign for a
+        // direct CoW order) must NOT validate for the shed - this is the replay vector.
+        address proxy = executorFactory.initializeProxy(user.addr, address(0), SALT_A);
+
+        LibCowOrder.Data memory order = _buildOrder(user.addr);
+        bytes32 cowDigest = _cowDigest(proxy, order);
+        // owner signs the raw GPv2 digest, not the shed-bound order hash
+        bytes memory sig = abi.encode(order, _signHash(cowDigest, user.privateKey));
+
+        assertEq(
+            IERC1271(proxy).isValidSignature(cowDigest, sig),
+            bytes4(0),
+            "raw GPv2 signature must not be replayable to the shed"
+        );
+    }
+
+    function testOrderSignatureDoesNotReplayAcrossSheds() external {
         // Two sheds for the same owner (different salt) -> different domain separators.
         address proxyA = executorFactory.initializeProxy(user.addr, address(0), SALT_A);
         address proxyB = executorFactory.initializeProxy(user.addr, address(0), SALT_B);
 
-        bytes32 orderDigest = keccak256("some order digest");
-        bytes memory sigForA = _signShedBoundOrder(proxyA, orderDigest, user.privateKey);
+        LibCowOrder.Data memory order = _buildOrder(user.addr);
+        bytes32 cowDigest = _cowDigest(proxyA, order); // same GPv2 digest regardless of shed
+        bytes memory sigForA = abi.encode(order, _signOrder(proxyA, order, user.privateKey));
 
         assertEq(
-            IERC1271(proxyA).isValidSignature(orderDigest, sigForA),
+            IERC1271(proxyA).isValidSignature(cowDigest, sigForA),
             LibAuthenticatedHooks.MAGIC_VALUE_1271,
             "signature should be valid on the shed it was bound to"
         );
         assertEq(
-            IERC1271(proxyB).isValidSignature(orderDigest, sigForA),
+            IERC1271(proxyB).isValidSignature(cowDigest, sigForA),
             bytes4(0),
             "signature bound to shed A must not validate on shed B"
         );
     }
 
-    function testIsValidSignatureRejectsNonOwnerSignature() external {
+    function testRejectsNonOwnerOrderSignature() external {
         address proxy = executorFactory.initializeProxy(user.addr, address(0), SALT_A);
 
         Vm.Wallet memory stranger = vm.createWallet("stranger");
-        bytes32 orderDigest = keccak256("some order digest");
-        bytes memory strangerSig = _signShedBoundOrder(proxy, orderDigest, stranger.privateKey);
+        LibCowOrder.Data memory order = _buildOrder(user.addr);
+        bytes32 cowDigest = _cowDigest(proxy, order);
+        bytes memory sig = abi.encode(order, _signOrder(proxy, order, stranger.privateKey));
+
         assertEq(
-            IERC1271(proxy).isValidSignature(orderDigest, strangerSig),
-            bytes4(0),
-            "non-owner signature should be rejected"
+            IERC1271(proxy).isValidSignature(cowDigest, sig), bytes4(0), "non-owner signature should be rejected"
         );
     }
 
-    function testIsValidSignatureRejectsMalformedSignatureWhenNoExecutorContract() external {
+    function testRejectsMalformedInnerSignature() external {
         address proxy = executorFactory.initializeProxy(user.addr, address(0), SALT_A);
-        // empty / malformed signature -> tryRecover yields address(0) -> rejected, no revert
-        assertEq(IERC1271(proxy).isValidSignature(keccak256("x"), hex""), bytes4(0), "empty sig should be rejected");
-        assertEq(
-            IERC1271(proxy).isValidSignature(keccak256("x"), hex"deadbeef"),
-            bytes4(0),
-            "garbage sig should be rejected"
-        );
+
+        LibCowOrder.Data memory order = _buildOrder(user.addr);
+        bytes32 cowDigest = _cowDigest(proxy, order);
+        // well-formed blob, but the owner signature is garbage -> tryRecover yields 0, no revert
+        bytes memory sig = abi.encode(order, hex"deadbeef");
+
+        assertEq(IERC1271(proxy).isValidSignature(cowDigest, sig), bytes4(0), "malformed inner sig should reject");
     }
 
-    function testExecutorContractIsAuthoritativeOverOwnerSignature() external {
-        // when an executor contract is configured, a valid owner signature is NOT accepted
+    function testExecutorContractIsAuthoritativeOverOwnerOrder() external {
+        // when an executor contract is configured, a valid owner-signed order is NOT accepted
         // unless the executor itself validates it
         address proxy = executorFactory.initializeProxy(user.addr, address(executor), SALT_A);
 
-        bytes32 orderDigest = keccak256("some order digest");
-        bytes memory ownerSig = _signShedBoundOrder(proxy, orderDigest, user.privateKey);
+        LibCowOrder.Data memory order = _buildOrder(user.addr);
+        bytes32 cowDigest = _cowDigest(proxy, order);
+        bytes memory sig = abi.encode(order, _signOrder(proxy, order, user.privateKey));
+
         assertEq(
-            IERC1271(proxy).isValidSignature(orderDigest, ownerSig),
+            IERC1271(proxy).isValidSignature(cowDigest, sig),
             bytes4(0),
-            "owner signature must not bypass a configured executor contract"
+            "owner-signed order must not bypass a configured executor contract"
         );
     }
 
@@ -255,13 +280,36 @@ contract COWShedWithExecutorSignerTest is BaseTest {
         return abi.encodePacked(r, s, v);
     }
 
-    /// @dev Sign the shed-bound wrapper of `hash` (as an integration would off-chain).
-    function _signShedBoundOrder(address proxy, bytes32 hash, uint256 privateKey)
+    function _buildOrder(address receiver) internal returns (LibCowOrder.Data memory order) {
+        order = LibCowOrder.Data({
+            sellToken: IERC20(makeAddr("sellToken")),
+            buyToken: IERC20(makeAddr("buyToken")),
+            receiver: receiver,
+            sellAmount: 1 ether,
+            buyAmount: 2 ether,
+            validTo: uint32(block.timestamp + 1 hours),
+            appData: keccak256("appData"),
+            feeAmount: 0,
+            kind: keccak256("sell"),
+            partiallyFillable: false,
+            sellTokenBalance: keccak256("erc20"),
+            buyTokenBalance: keccak256("erc20")
+        });
+    }
+
+    /// @dev The GPv2 order digest CoW settlement would pass to `isValidSignature`.
+    function _cowDigest(address proxy, LibCowOrder.Data memory order) internal view returns (bytes32) {
+        bytes32 cowDs = COWShedWithExecutorSigner(payable(proxy)).cowDomainSeparator();
+        return LibCowOrder.hash(order, cowDs);
+    }
+
+    /// @dev Sign the shed-bound order hash (as an integration would off-chain).
+    function _signOrder(address proxy, LibCowOrder.Data memory order, uint256 privateKey)
         internal
         view
         returns (bytes memory)
     {
-        bytes32 bound = COWShedWithExecutorSigner(payable(proxy)).toSignedMessageHash(hash);
+        bytes32 bound = COWShedWithExecutorSigner(payable(proxy)).orderSignedHash(order);
         return _signHash(bound, privateKey);
     }
 
