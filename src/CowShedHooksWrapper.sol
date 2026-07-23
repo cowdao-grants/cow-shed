@@ -28,15 +28,26 @@ interface ISettlementFilled {
 contract CowShedHooksWrapper is CowWrapper, IERC1271 {
     using LibBitmap for LibBitmap.Bitmap;
 
+    /// @dev This wrapper isn't the last hop before settlement; the bless window must span only the
+    ///      `settle` call this wrapper makes, so it must be the final wrapper in the chain.
     error MustBeFinalWrapper();
+    /// @dev `_wrap` was re-entered while a settlement it started is still active.
     error Reentrancy();
+    /// @dev The bundle array is empty; there is nothing to settle.
     error NoItems();
+    /// @dev The bundle array exceeds `MAX_ITEMS`.
     error TooManyItems();
+    /// @dev An order's `receiver` is not `address(0)`; it must pay the shed (the order owner).
     error NonZeroReceiver();
+    /// @dev The bundle signature does not recover to the order owner.
     error BadSignature();
+    /// @dev The derived shed is not deployed, or its `trustedExecutor` is not this wrapper.
     error ShedNotConfigured();
+    /// @dev The bundle nonce has already been consumed (or was cancelled by the owner).
     error NonceAlreadyUsed();
+    /// @dev The order already had a non-zero filled amount before settlement (replay / stale).
     error OrderAlreadyFilled();
+    /// @dev After settlement the order's filled amount was below `expectedFill`.
     error OrderNotSettled();
 
     event Settled(address indexed shed, uint256 nonce);
