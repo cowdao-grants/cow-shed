@@ -2,10 +2,10 @@
 pragma solidity ^0.8.25;
 
 import {Vm} from "forge-std/Test.sol";
-import {BaseTest} from "test/BaseTest.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
 import {COWShedWithMerkleSigner} from "src/COWShedWithMerkleSigner.sol";
 import {ERC1271MerkleValidator} from "src/ERC1271MerkleValidator.sol";
+import {BaseTest} from "test/BaseTest.sol";
 
 contract COWShedWithMerkleSignerTest is BaseTest {
     /// @dev ERC-1271 magic value.
@@ -74,9 +74,7 @@ contract COWShedWithMerkleSignerTest is BaseTest {
         // Proof is for digests[0]; ask about an unrelated digest.
         bytes memory sig = _encodeSig(root, validTo, rootSig, proof);
 
-        assertEq(
-            merkleProxy.isValidSignature(keccak256("not-in-tree"), sig), bytes4(0), "non-member must fail closed"
-        );
+        assertEq(merkleProxy.isValidSignature(keccak256("not-in-tree"), sig), bytes4(0), "non-member must fail closed");
     }
 
     function test_isValidSignature_wrongSignerFailsClosed() public {
@@ -143,9 +141,10 @@ contract COWShedWithMerkleSignerTest is BaseTest {
 
     function _rootDigest(address proxy, bytes32 root, uint256 validTo) internal view returns (bytes32) {
         bytes32 structHash = keccak256(abi.encode(ROOT_TYPE_HASH, root, validTo));
-        return keccak256(
-            abi.encodePacked("\x19\x01", COWShedWithMerkleSigner(payable(proxy)).domainSeparator(), structHash)
-        );
+        return
+            keccak256(
+                abi.encodePacked("\x19\x01", COWShedWithMerkleSigner(payable(proxy)).domainSeparator(), structHash)
+            );
     }
 
     function _signRootEOA(Vm.Wallet memory wallet, address proxy, bytes32 root, uint256 validTo)
