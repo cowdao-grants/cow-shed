@@ -20,9 +20,11 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
  *      root signature is bound to this proxy's domain + chain, so neither the leaf nor
  *      the root can be replayed across chains or across proxies.
  *
- *      Revocation is intentionally out of scope for this contract: authorization is
- *      time-bounded via `validTo`. On-chain (per-root / per-order) revocation is a
- *      planned follow-up that would layer a storage check on top of this path.
+ *      Authorization is time-bounded via `validTo`, and can additionally be cancelled
+ *      before expiry via on-chain revocation: a whole root (bulk cancel, one SSTORE) or
+ *      a single order digest. Revocations are additive and permanent — to re-enable, the
+ *      owner signs a fresh root. The registry lives at a dedicated, namespaced storage
+ *      slot so it never collides with the shed's own state.
  */
 abstract contract ERC1271MerkleValidator is IERC1271 {
     /// @dev EIP-712 typehash for the owner's root commitment.
@@ -30,6 +32,16 @@ abstract contract ERC1271MerkleValidator is IERC1271 {
 
     /// @dev ERC-1271 magic value returned on successful validation.
     bytes4 internal constant MAGIC_VALUE = 0x1626ba7e;
+
+    /// @dev Namespaced storage slot for the revocation registry. Chosen so it cannot
+    ///      collide with `COWShedStorage.State` (keccak256("COWShed.State")) or the
+    ///      EIP-1967 implementation slot.
+    bytes32 internal constant REVOCATION_STORAGE_SLOT = keccak256("COWShed.MerkleRevocation");
+
+    /// @notice Emitted when an entire root (and therefore every order under it) is revoked.
+    event RootRevoked(bytes32 indexed root);
+    /// @notice Emitted when a single order digest is revoked.
+    event OrderRevoked(bytes32 indexed orderDigest);
 
     /// @dev The payload the solver carries in the settlement's `signature` field.
     struct MerkleSignature {
@@ -45,6 +57,16 @@ abstract contract ERC1271MerkleValidator is IERC1271 {
     /// @notice The address whose signature authorizes a root (the proxy owner/admin).
     function _rootSigner() internal view virtual returns (address);
 
+    /// @notice Whether an entire root has been revoked on-chain.
+    function isRootRevoked(bytes32 root) public view returns (bool) {
+        return _revoked()[_rootKey(root)];
+    }
+
+    /// @notice Whether a single order digest has been revoked on-chain.
+    function isOrderRevoked(bytes32 orderDigest) public view returns (bool) {
+        return _revoked()[_orderKey(orderDigest)];
+    }
+
     /**
      * @param _hash GPv2 order digest, computed and passed by the settlement.
      * @param signature abi.encoded `MerkleSignature`.
@@ -55,6 +77,13 @@ abstract contract ERC1271MerkleValidator is IERC1271 {
 
         // Ensure the signature hasn't expired
         if (block.timestamp > sig.validTo) {
+            return bytes4(0);
+        }
+
+        // Ensure neither the whole batch (root) nor this specific order has been revoked
+        // on-chain. Checked before the expensive signature/proof verification so a revoked
+        // order fails cheaply.
+        if (isRootRevoked(sig.root) || isOrderRevoked(_hash)) {
             return bytes4(0);
         }
 
@@ -76,5 +105,35 @@ abstract contract ERC1271MerkleValidator is IERC1271 {
     function _rootDigest(bytes32 root, uint256 validTo) internal view returns (bytes32) {
         bytes32 structHash = keccak256(abi.encode(ROOT_TYPE_HASH, root, validTo));
         return keccak256(abi.encodePacked("\x19\x01", _domainSeparatorV4(), structHash));
+    }
+
+    /// @dev Revoke an entire root; every order proving under it stops validating.
+    function _revokeRoot(bytes32 root) internal {
+        _revoked()[_rootKey(root)] = true;
+        emit RootRevoked(root);
+    }
+
+    /// @dev Revoke a single order digest, even if its root remains otherwise valid.
+    function _revokeOrder(bytes32 orderDigest) internal {
+        _revoked()[_orderKey(orderDigest)] = true;
+        emit OrderRevoked(orderDigest);
+    }
+
+    /// @dev Tags keep root and order keys in disjoint sub-spaces of the shared mapping.
+    function _rootKey(bytes32 root) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked("root", root));
+    }
+
+    function _orderKey(bytes32 orderDigest) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked("order", orderDigest));
+    }
+
+    /// @dev Revocation registry pinned to a dedicated storage slot.
+    function _revoked() private pure returns (mapping(bytes32 => bool) storage revoked) {
+        bytes32 slot = REVOCATION_STORAGE_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            revoked.slot := slot
+        }
     }
 }

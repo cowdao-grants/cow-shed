@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 import {Vm} from "forge-std/Test.sol";
+import {COWShed} from "src/COWShed.sol";
 import {COWShedFactory} from "src/COWShedFactory.sol";
 import {COWShedWithMerkleSigner} from "src/COWShedWithMerkleSigner.sol";
 import {ERC1271MerkleValidator} from "src/ERC1271MerkleValidator.sol";
@@ -112,6 +113,66 @@ contract COWShedWithMerkleSignerTest is BaseTest {
         assertEq(swMerkleProxy.isValidSignature(digests[0], sig), MAGIC, "contract owner (ERC-1271) should validate");
     }
 
+    function test_revokeRoot_invalidatesEntireBatch() public {
+        (bytes32 root, bytes32[] memory proof) = _rootAndProof(0);
+        uint256 validTo = block.timestamp + 1 hours;
+        bytes memory rootSig = _signRootEOA(user, merkleProxyAddr, root, validTo);
+        bytes memory sig = _encodeSig(root, validTo, rootSig, proof);
+
+        assertEq(merkleProxy.isValidSignature(digests[0], sig), MAGIC, "valid before revocation");
+
+        vm.prank(user.addr);
+        merkleProxy.revokeRoot(root);
+
+        assertTrue(merkleProxy.isRootRevoked(root), "root should be marked revoked");
+        assertEq(merkleProxy.isValidSignature(digests[0], sig), bytes4(0), "revoked root must fail closed");
+    }
+
+    function test_revokeOrder_invalidatesOnlyThatOrder() public {
+        uint256 validTo = block.timestamp + 1 hours;
+        (bytes32 root, bytes32[] memory proof0) = _rootAndProof(0);
+        (, bytes32[] memory proof2) = _rootAndProof(2);
+        bytes memory rootSig = _signRootEOA(user, merkleProxyAddr, root, validTo);
+
+        vm.prank(user.addr);
+        merkleProxy.revokeOrder(digests[0]);
+
+        bytes memory sig0 = _encodeSig(root, validTo, rootSig, proof0);
+        bytes memory sig2 = _encodeSig(root, validTo, rootSig, proof2);
+
+        assertEq(merkleProxy.isValidSignature(digests[0], sig0), bytes4(0), "revoked order must fail closed");
+        assertEq(merkleProxy.isValidSignature(digests[2], sig2), MAGIC, "sibling order under same root still valid");
+    }
+
+    function test_revokeRoots_batch() public {
+        (bytes32 root, bytes32[] memory proof) = _rootAndProof(0);
+        uint256 validTo = block.timestamp + 1 hours;
+        bytes memory rootSig = _signRootEOA(user, merkleProxyAddr, root, validTo);
+        bytes memory sig = _encodeSig(root, validTo, rootSig, proof);
+
+        bytes32[] memory roots = new bytes32[](2);
+        roots[0] = keccak256("some-other-root");
+        roots[1] = root;
+
+        vm.prank(user.addr);
+        merkleProxy.revokeRoots(roots);
+
+        assertEq(merkleProxy.isValidSignature(digests[0], sig), bytes4(0), "batch-revoked root must fail closed");
+    }
+
+    function test_revoke_onlyOwner() public {
+        (bytes32 root,) = _rootAndProof(0);
+        address attacker = makeAddr("attacker");
+
+        vm.prank(attacker);
+        vm.expectRevert(COWShed.OnlyAdmin.selector);
+        merkleProxy.revokeRoot(root);
+
+        vm.prank(attacker);
+        vm.expectRevert(COWShed.OnlyAdmin.selector);
+        merkleProxy.revokeOrder(digests[0]);
+    }
+
     // --- helpers ---------------------------------------------------------
 
     /// @dev leaf hashing matches @openzeppelin/merkle-tree StandardMerkleTree, leafEncoding ["bytes32"].
@@ -126,6 +187,11 @@ contract COWShedWithMerkleSignerTest is BaseTest {
 
     /// @dev Build a 4-leaf balanced tree and return the root + inclusion proof for digests[0].
     function _rootAndProofForFirstDigest() internal view returns (bytes32 root, bytes32[] memory proof) {
+        return _rootAndProof(0);
+    }
+
+    /// @dev Build a 4-leaf balanced tree and return the root + inclusion proof for digests[index].
+    function _rootAndProof(uint256 index) internal view returns (bytes32 root, bytes32[] memory proof) {
         bytes32 l0 = _leaf(digests[0]);
         bytes32 l1 = _leaf(digests[1]);
         bytes32 l2 = _leaf(digests[2]);
@@ -135,8 +201,19 @@ contract COWShedWithMerkleSignerTest is BaseTest {
         root = _hashPair(n01, n23);
 
         proof = new bytes32[](2);
-        proof[0] = l1;
-        proof[1] = n23;
+        if (index == 0) {
+            proof[0] = l1;
+            proof[1] = n23;
+        } else if (index == 1) {
+            proof[0] = l0;
+            proof[1] = n23;
+        } else if (index == 2) {
+            proof[0] = l3;
+            proof[1] = n01;
+        } else {
+            proof[0] = l2;
+            proof[1] = n01;
+        }
     }
 
     function _rootDigest(address proxy, bytes32 root, uint256 validTo) internal view returns (bytes32) {
