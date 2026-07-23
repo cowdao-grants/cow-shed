@@ -255,13 +255,13 @@ contract COWShedWithExecutorSignerTest is BaseTest {
         return abi.encodePacked(r, s, v);
     }
 
-    /// @dev Sign the shed-bound wrapper of `orderDigest` (as an integration would off-chain).
-    function _signShedBoundOrder(address proxy, bytes32 orderDigest, uint256 privateKey)
+    /// @dev Sign the shed-bound wrapper of `hash` (as an integration would off-chain).
+    function _signShedBoundOrder(address proxy, bytes32 hash, uint256 privateKey)
         internal
         view
         returns (bytes memory)
     {
-        bytes32 bound = COWShedWithExecutorSigner(payable(proxy)).ownerSignedHash(orderDigest);
+        bytes32 bound = COWShedWithExecutorSigner(payable(proxy)).toSignedMessageHash(hash);
         return _signHash(bound, privateKey);
     }
 
