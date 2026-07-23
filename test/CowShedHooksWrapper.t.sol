@@ -150,7 +150,7 @@ contract CowShedHooksWrapperTest is Test {
 
     function _exec(uint256 nonce, uint256 expectedFill)
         internal
-        returns (CowShedHooksWrapper.HooksOrderExec memory e)
+        returns (CowShedHooksWrapper.Bundle memory e)
     {
         e.owner = user.addr;
         e.salt = SALT;
@@ -162,11 +162,11 @@ contract CowShedHooksWrapperTest is Test {
         e.signature = _sign(e);
     }
 
-    function _sign(CowShedHooksWrapper.HooksOrderExec memory e) internal returns (bytes memory) {
+    function _sign(CowShedHooksWrapper.Bundle memory e) internal returns (bytes memory) {
         return _signWith(e, user.privateKey);
     }
 
-    function _signWith(CowShedHooksWrapper.HooksOrderExec memory e, uint256 pk)
+    function _signWith(CowShedHooksWrapper.Bundle memory e, uint256 pk)
         internal
         returns (bytes memory)
     {
@@ -187,8 +187,8 @@ contract CowShedHooksWrapperTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
-    function _settle(CowShedHooksWrapper.HooksOrderExec memory e) internal {
-        CowShedHooksWrapper.HooksOrderExec[] memory exs = new CowShedHooksWrapper.HooksOrderExec[](1);
+    function _settle(CowShedHooksWrapper.Bundle memory e) internal {
+        CowShedHooksWrapper.Bundle[] memory exs = new CowShedHooksWrapper.Bundle[](1);
         exs[0] = e;
         bytes memory wrapperData = abi.encode(exs);
         bytes memory chained = abi.encodePacked(uint16(wrapperData.length), wrapperData);
@@ -203,7 +203,7 @@ contract CowShedHooksWrapperTest is Test {
         LibCowOrder.Data memory o = _order();
         settlement.prime(shed, _digest(o), _uid(o), 1 ether);
 
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
         _settle(e);
 
         assertEq(recorder.preCaller(), shed, "pre-hook did not run as the shed");
@@ -219,7 +219,7 @@ contract CowShedHooksWrapperTest is Test {
         settlement.prime(shed, _digest(o), _uid(o), 1 ether);
         recorder.setFail(true, false);
 
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
         vm.expectRevert(); // pre-hook reverts before settle
         _settle(e);
 
@@ -231,7 +231,7 @@ contract CowShedHooksWrapperTest is Test {
         settlement.prime(shed, _digest(o), _uid(o), 1 ether);
         recorder.setFail(false, true);
 
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
         vm.expectRevert(); // post-hook reverts -> whole tx reverts, fill rolled back
         _settle(e);
         assertFalse(wrapper.isNonceUsed(shed, 1), "nonce must not be consumed on revert");
@@ -241,7 +241,7 @@ contract CowShedHooksWrapperTest is Test {
         LibCowOrder.Data memory o = _order();
         settlement.prime(shed, _digest(o), _uid(o), 0); // settles 0 < expectedFill
 
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
         vm.expectRevert(CowShedHooksWrapper.OrderNotSettled.selector);
         _settle(e);
     }
@@ -255,9 +255,9 @@ contract CowShedHooksWrapperTest is Test {
     function testNonSolverCannotSettle() external {
         LibCowOrder.Data memory o = _order();
         settlement.prime(shed, _digest(o), _uid(o), 1 ether);
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
 
-        CowShedHooksWrapper.HooksOrderExec[] memory exs = new CowShedHooksWrapper.HooksOrderExec[](1);
+        CowShedHooksWrapper.Bundle[] memory exs = new CowShedHooksWrapper.Bundle[](1);
         exs[0] = e;
         bytes memory wrapperData = abi.encode(exs);
         bytes memory chained = abi.encodePacked(uint16(wrapperData.length), wrapperData);
@@ -270,7 +270,7 @@ contract CowShedHooksWrapperTest is Test {
         LibCowOrder.Data memory o = _order();
         settlement.prime(shed, _digest(o), _uid(o), 1 ether);
 
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
         (, uint256 strangerPk) = makeAddrAndKey("stranger");
         e.signature = _signWith(e, strangerPk);
 
@@ -282,7 +282,7 @@ contract CowShedHooksWrapperTest is Test {
         LibCowOrder.Data memory o = _order();
         settlement.prime(shed, _digest(o), _uid(o), 1 ether);
 
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
         _settle(e);
 
         // reusing the same nonce is rejected (nonce is checked before the fill check)
@@ -291,7 +291,7 @@ contract CowShedHooksWrapperTest is Test {
     }
 
     function testNonZeroReceiverRejected() external {
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
         e.order.receiver = makeAddr("elsewhere");
         e.signature = _sign(e); // re-sign so the signature is valid for this (bad) order
 
@@ -306,7 +306,7 @@ contract CowShedHooksWrapperTest is Test {
         vm.prank(user.addr);
         wrapper.cancelNonce(SALT, 1);
 
-        CowShedHooksWrapper.HooksOrderExec memory e = _exec(1, 1 ether);
+        CowShedHooksWrapper.Bundle memory e = _exec(1, 1 ether);
         vm.expectRevert(CowShedHooksWrapper.NonceAlreadyUsed.selector);
         _settle(e);
     }

@@ -67,8 +67,9 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
     ///      from an earlier settlement in the same transaction can never be reused.
     uint256 private transient _epoch;
 
-    /// @dev One enforceable bundle, supplied by the solver at settle time.
-    struct HooksOrderExec {
+    /// @notice One enforceable bundle, supplied by the solver at settle time: the owner-signed
+    ///         `(preHooks, order, postHooks)` to run atomically around the fill.
+    struct Bundle {
         address owner;
         bytes32 salt;
         Call[] preHooks;
@@ -76,7 +77,14 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         LibCowOrder.Data order;
         uint256 expectedFill;
         uint256 nonce;
-        bytes signature; // owner EIP-712 signature over the HooksOrder struct
+        bytes signature; // owner EIP-712 signature over the `HooksOrder` type
+    }
+
+    /// @dev Per-bundle values resolved in pass 1 and reused across the later passes.
+    struct Prepared {
+        address shed;
+        bytes32 digest; // GPv2 order digest
+        bytes uid; // GPv2 order UID
     }
 
     constructor(ICowSettlement settlement_, COWShedExecutorFactory factory_) CowWrapper(settlement_) {
@@ -92,12 +100,12 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
     /// @dev Lightweight structural validation of the settle-time bundle payload (signatures and
     ///      nonces are checked in `_wrap` at execution time).
     function validateWrapperData(bytes calldata wrapperData) external pure override {
-        HooksOrderExec[] memory ex = abi.decode(wrapperData, (HooksOrderExec[]));
-        uint256 k = ex.length;
-        if (k == 0) revert NoItems();
-        if (k > MAX_ITEMS) revert TooManyItems();
-        for (uint256 i; i < k; ++i) {
-            if (ex[i].order.receiver != address(0)) revert NonZeroReceiver();
+        Bundle[] memory bundles = abi.decode(wrapperData, (Bundle[]));
+        uint256 count = bundles.length;
+        if (count == 0) revert NoItems();
+        if (count > MAX_ITEMS) revert TooManyItems();
+        for (uint256 i; i < count; ++i) {
+            if (bundles[i].order.receiver != address(0)) revert NonZeroReceiver();
         }
     }
 
@@ -145,88 +153,88 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
         if (_inSettlement) revert Reentrancy();
         if (remainingWrapperData.length != 0) revert MustBeFinalWrapper();
 
-        HooksOrderExec[] memory ex = abi.decode(wrapperData, (HooksOrderExec[]));
-        uint256 k = ex.length;
-        if (k == 0) revert NoItems();
-        if (k > MAX_ITEMS) revert TooManyItems();
+        Bundle[] memory bundles = abi.decode(wrapperData, (Bundle[]));
+        uint256 count = bundles.length;
+        if (count == 0) revert NoItems();
+        if (count > MAX_ITEMS) revert TooManyItems();
 
         uint256 epoch = _epoch + 1;
         _epoch = epoch;
         _inSettlement = true;
 
-        bytes32 ds = SETTLEMENT.domainSeparator();
-        address[] memory sheds = new address[](k);
-        bytes32[] memory digests = new bytes32[](k);
-        bytes[] memory uids = new bytes[](k);
+        bytes32 cowDomainSeparator = SETTLEMENT.domainSeparator();
+        Prepared[] memory prepared = new Prepared[](count);
 
-        // PASS 1: authorize each bundle, freeze its nonce, require the order is unfilled.
-        for (uint256 i; i < k; ++i) {
-            HooksOrderExec memory e = ex[i];
-            // Make sure the receiver is zero (so the cow-shed's proxy receives it)
-            if (e.order.receiver != address(0)) revert NonZeroReceiver();
+        // PASS 1: authorize each bundle, freeze its nonce, and require the order is not yet filled.
+        for (uint256 i; i < count; ++i) {
+            Bundle memory bundle = bundles[i];
+            // receiver must be zero so the filled order pays the shed (the order owner)
+            if (bundle.order.receiver != address(0)) revert NonZeroReceiver();
 
-            bytes32 digest = LibCowOrder.hash(e.order, ds);
-            address shed = _authorize(e, digest);
-
-            bytes memory uid = abi.encodePacked(digest, shed, e.order.validTo);
+            bytes32 digest = LibCowOrder.hash(bundle.order, cowDomainSeparator);
+            address shed = _authorize(bundle, digest);
+            bytes memory uid = _orderUid(digest, shed, bundle.order.validTo);
             if (_filledAmount(uid) != 0) revert OrderAlreadyFilled();
 
-            sheds[i] = shed;
-            digests[i] = digest;
-            uids[i] = uid;
+            prepared[i] = Prepared({shed: shed, digest: digest, uid: uid});
         }
 
         // PASS 2: run each pre-hook as the shed.
-        for (uint256 i; i < k; ++i) {
-            COWShed(payable(sheds[i])).trustedExecuteHooks(ex[i].preHooks);
+        for (uint256 i; i < count; ++i) {
+            COWShed(payable(prepared[i].shed)).trustedExecuteHooks(bundles[i].preHooks);
         }
 
-        // PASS 3: bless each digest for this epoch, then descend into settlement.
-        for (uint256 i; i < k; ++i) {
-            _tstore(_blessSlot(epoch, sheds[i], digests[i]), 1);
+        // PASS 3: bless each order digest for this epoch, then descend into settlement.
+        for (uint256 i; i < count; ++i) {
+            _tstore(_blessSlot(epoch, prepared[i].shed, prepared[i].digest), 1);
         }
 
         _next(settleData, remainingWrapperData);
 
-        // Close the bless window.
+        // close the bless window before any post-hook runs
         _inSettlement = false;
 
-        // PASS 4: verify each order filled, then run its post-hook as the shed.
-        for (uint256 i; i < k; ++i) {
-            if (_filledAmount(uids[i]) < ex[i].expectedFill) revert OrderNotSettled();
-            COWShed(payable(sheds[i])).trustedExecuteHooks(ex[i].postHooks);
-            emit Settled(sheds[i], ex[i].nonce);
+        // PASS 4: require each order filled, then run its post-hook as the shed.
+        for (uint256 i; i < count; ++i) {
+            if (_filledAmount(prepared[i].uid) < bundles[i].expectedFill) revert OrderNotSettled();
+            COWShed(payable(prepared[i].shed)).trustedExecuteHooks(bundles[i].postHooks);
+            emit Settled(prepared[i].shed, bundles[i].nonce);
         }
     }
 
     /// @dev Verify the owner signature, resolve + check the shed, and consume the nonce.
-    function _authorize(HooksOrderExec memory e, bytes32 digest) internal returns (address shed) {
+    function _authorize(Bundle memory bundle, bytes32 digest) internal returns (address shed) {
         bytes32 structHash = keccak256(
             abi.encode(
                 HOOKS_ORDER_TYPE_HASH,
-                e.owner,
-                e.salt,
-                keccak256(abi.encode(e.preHooks)),
-                keccak256(abi.encode(e.postHooks)),
+                bundle.owner,
+                bundle.salt,
+                keccak256(abi.encode(bundle.preHooks)),
+                keccak256(abi.encode(bundle.postHooks)),
                 digest,
-                e.expectedFill,
-                e.nonce
+                bundle.expectedFill,
+                bundle.nonce
             )
         );
         bytes32 signHash = keccak256(abi.encodePacked(hex"1901", domainSeparator(), structHash));
-        if (ECDSA.recover(signHash, e.signature) != e.owner) revert BadSignature();
+        if (ECDSA.recover(signHash, bundle.signature) != bundle.owner) revert BadSignature();
 
-        shed = factory.proxyOf(e.owner, address(this), e.salt);
+        shed = factory.proxyOf(bundle.owner, address(this), bundle.salt);
         if (shed.code.length == 0 || COWShed(payable(shed)).trustedExecutor() != address(this)) {
             revert ShedNotConfigured();
         }
 
-        if (_nonces[shed].get(e.nonce)) revert NonceAlreadyUsed();
-        _nonces[shed].set(e.nonce);
+        if (_nonces[shed].get(bundle.nonce)) revert NonceAlreadyUsed();
+        _nonces[shed].set(bundle.nonce);
     }
 
     function _filledAmount(bytes memory uid) private view returns (uint256) {
         return ISettlementFilled(address(SETTLEMENT)).filledAmount(uid);
+    }
+
+    /// @dev GPv2 order UID layout: `orderDigest (32) ‖ owner (20) ‖ validTo (4)`; the owner is the shed.
+    function _orderUid(bytes32 digest, address shed, uint32 validTo) private pure returns (bytes memory) {
+        return abi.encodePacked(digest, shed, validTo);
     }
 
     function _blessSlot(uint256 epoch, address shed, bytes32 digest) private pure returns (bytes32) {
