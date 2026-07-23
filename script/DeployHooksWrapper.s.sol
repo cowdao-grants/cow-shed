@@ -5,7 +5,7 @@ import {Script} from "forge-std/Script.sol";
 
 import {COWShedExecutorFactory} from "src/COWShedExecutorFactory.sol";
 import {CowShedHooksWrapper} from "src/CowShedHooksWrapper.sol";
-import {ICowSettlement} from "src/CowWrapper.sol";
+import {ICowSettlement} from "src/vendor/CowWrapper.sol";
 
 /// @dev Deploys the enforceable-hooks wrapper. Kept separate from `Deploy.s.sol` so the shared test
 ///      deployment (BaseTest) does not construct a wrapper against a settlement with no code.

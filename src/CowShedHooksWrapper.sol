@@ -3,12 +3,18 @@ pragma solidity ^0.8.25;
 
 import {COWShed} from "./COWShed.sol";
 import {COWShedExecutorFactory} from "./COWShedExecutorFactory.sol";
-import {CowWrapper, ICowSettlement} from "./CowWrapper.sol";
 import {Call} from "./ICOWAuthHook.sol";
 import {IERC1271} from "./IERC1271.sol";
 import {LibCowOrder} from "./LibCowOrder.sol";
+import {CowWrapper, ICowSettlement, ICowWrapper} from "./vendor/CowWrapper.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {LibBitmap} from "solady/utils/LibBitmap.sol";
+
+/// @dev GPv2Settlement exposes filled amounts per order UID, but the vendored `ICowSettlement`
+///      (kept minimal upstream) omits it. Declared locally and cast over the settlement address.
+interface ISettlementFilled {
+    function filledAmount(bytes calldata orderUid) external view returns (uint256);
+}
 
 /// @title CowShedHooksWrapper
 /// @notice Enforceable hooks for cow-shed: given `preHooks`, a CoW `order`, and `postHooks`, the
@@ -70,6 +76,24 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
 
     constructor(ICowSettlement settlement_, COWShedExecutorFactory factory_) CowWrapper(settlement_) {
         factory = factory_;
+    }
+
+    /// @inheritdoc ICowWrapper
+    function name() external pure override returns (string memory) {
+        return "CowShedHooksWrapper";
+    }
+
+    /// @inheritdoc ICowWrapper
+    /// @dev Lightweight structural validation of the settle-time bundle payload (signatures and
+    ///      nonces are checked in `_wrap` at execution time).
+    function validateWrapperData(bytes calldata wrapperData) external pure override {
+        HooksOrderExec[] memory ex = abi.decode(wrapperData, (HooksOrderExec[]));
+        uint256 k = ex.length;
+        if (k == 0) revert NoItems();
+        if (k > MAX_ITEMS) revert TooManyItems();
+        for (uint256 i; i < k; ++i) {
+            if (ex[i].order.receiver != address(0)) revert NonZeroReceiver();
+        }
     }
 
     /// @inheritdoc IERC1271
@@ -139,7 +163,7 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
             address shed = _authorize(e, digest);
 
             bytes memory uid = abi.encodePacked(digest, shed, e.order.validTo);
-            if (SETTLEMENT.filledAmount(uid) != 0) revert OrderAlreadyFilled();
+            if (_filledAmount(uid) != 0) revert OrderAlreadyFilled();
 
             sheds[i] = shed;
             digests[i] = digest;
@@ -163,7 +187,7 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
 
         // PASS 4: verify each order filled, then run its post-hook as the shed.
         for (uint256 i; i < k; ++i) {
-            if (SETTLEMENT.filledAmount(uids[i]) < ex[i].expectedFill) revert OrderNotSettled();
+            if (_filledAmount(uids[i]) < ex[i].expectedFill) revert OrderNotSettled();
             COWShed(payable(sheds[i])).trustedExecuteHooks(ex[i].postHooks);
             emit Settled(sheds[i], ex[i].nonce);
         }
@@ -193,6 +217,10 @@ contract CowShedHooksWrapper is CowWrapper, IERC1271 {
 
         if (_nonces[shed].get(e.nonce)) revert NonceAlreadyUsed();
         _nonces[shed].set(e.nonce);
+    }
+
+    function _filledAmount(bytes memory uid) private view returns (uint256) {
+        return ISettlementFilled(address(SETTLEMENT)).filledAmount(uid);
     }
 
     function _blessSlot(uint256 epoch, address shed, bytes32 digest) private pure returns (bytes32) {

@@ -6,7 +6,7 @@ import {COWShed, Call} from "src/COWShed.sol";
 import {COWShedExecutorFactory} from "src/COWShedExecutorFactory.sol";
 import {COWShedWithExecutorSigner} from "src/COWShedWithExecutorSigner.sol";
 import {CowShedHooksWrapper} from "src/CowShedHooksWrapper.sol";
-import {CowWrapper, ICowAuthentication, ICowSettlement} from "src/CowWrapper.sol";
+import {CowWrapper, ICowAuthentication, ICowSettlement} from "src/vendor/CowWrapper.sol";
 import {IERC1271} from "src/IERC1271.sol";
 import {LibCowOrder} from "src/LibCowOrder.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
