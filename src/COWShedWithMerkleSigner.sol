@@ -22,4 +22,28 @@ contract COWShedWithMerkleSigner is COWShed, ERC1271MerkleValidator {
     function _domainSeparatorV4() internal view override returns (bytes32) {
         return domainSeparator();
     }
+
+    /// @notice Revoke an entire authorized root (bulk cancel). Only the owner.
+    function revokeRoot(bytes32 root) external onlyAdmin {
+        _revokeRoot(root);
+    }
+
+    /// @notice Revoke several roots in a single call. Only the owner.
+    function revokeRoots(bytes32[] calldata roots) external onlyAdmin {
+        for (uint256 i; i < roots.length; i++) {
+            _revokeRoot(roots[i]);
+        }
+    }
+
+    /// @notice Revoke a single order by its digest, even if its root remains valid. Only the owner.
+    function revokeOrder(bytes32 orderDigest) external onlyAdmin {
+        _revokeOrder(orderDigest);
+    }
+
+    /// @notice Revoke several order digests in a single call. Only the owner.
+    function revokeOrders(bytes32[] calldata orderDigests) external onlyAdmin {
+        for (uint256 i; i < orderDigests.length; i++) {
+            _revokeOrder(orderDigests[i]);
+        }
+    }
 }
