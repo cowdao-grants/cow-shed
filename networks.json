@@ -47,12 +47,12 @@
   },
   "COWShedFactory": {
     "1": {
-      "address": "0x5e284e80f3bd6a7d80a8500d9c49878028110848",
-      "transactionHash": "0x995d3a2ef39ca415eda02dcdd453d5b76e7fff0019aea16e0f73520733b5ef46"
+      "address": "0xc94f7d71d022e773b0b516841ff867c06f39726b",
+      "transactionHash": "0x980d1c4b667994c8e8acc031638de193a4219540df88d07f8cc14a65424a23d5"
     },
     "100": {
-      "address": "0x4f4350bf2c74aacd508d598a1ba94ef84378793d",
-      "transactionHash": "0xcac32df12864ffb4da7843e5bf1e302dca79c485ef30da437a2a3b338146f924"
+      "address": "0xcf1ada436dee1e5923bd6195afdb85a4237a6fc0",
+      "transactionHash": "0x5830a0a5bebb376de08174996791aa44c83227f60271572e213c154ce24b3d66"
     },
     "11155111": {
       "address": "0x312f92fe5f1710408b20d52a374fa29e099cfa86",
@@ -90,6 +90,16 @@
       "address": "0x312f92fe5f1710408b20d52a374fa29e099cfa86",
       "transactionHash": "0x33d7ed32d433467d75373baf0bcbc99fec65df8a8fd6f67673efa8378f67ebcc"
     }    
+  },
+  "COWShedFactoryForComposableCoW": {
+    "1": {
+      "address": "0x5e284e80f3bd6a7d80a8500d9c49878028110848",
+      "transactionHash": "0x995d3a2ef39ca415eda02dcdd453d5b76e7fff0019aea16e0f73520733b5ef46"
+    },
+    "100": {
+      "address": "0x4f4350bf2c74aacd508d598a1ba94ef84378793d",
+      "transactionHash": "0xcac32df12864ffb4da7843e5bf1e302dca79c485ef30da437a2a3b338146f924"
+    }
   },
   "COWShedForComposableCoW": {
     "1": {
