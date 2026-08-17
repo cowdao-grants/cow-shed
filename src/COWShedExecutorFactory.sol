@@ -178,29 +178,71 @@ contract COWShedExecutorFactory is COWShedFactory {
     ///
     ///      Callers relying on the setup having run must therefore not infer it from the shed's
     ///      address alone; watch for `SetupSkipped` (or check the setup target's own state).
+    ///
+    ///      `calls` runs as the shed in the same transaction, so the owner can deploy and empty a
+    ///      stranded shed atomically. That matters beyond convenience: the committed
+    ///      `trustedExecutor` cannot be swapped out (it is part of the address), so it gains its
+    ///      trusted role the moment the shed exists. Sweeping in a separate transaction would
+    ///      leave a window for it to drain the shed first.
     /// @param owner           - The owner/admin of the proxy. Must be the caller.
-    /// @param trustedExecutor - The trusted executor the proxy is initialized with.
+    /// @param trustedExecutor - The trusted executor the proxy ends up configured with.
     /// @param salt            - Arbitrary salt to allow multiple proxies per (owner, executor).
     /// @param setupTarget     - The setup target committed into the address, *not* called.
     /// @param setupData       - The setup data committed into the address, *not* used.
+    /// @param calls           - Calls to execute as the shed right after deploying it, e.g. to
+    ///                          withdraw stranded funds. May be empty.
     /// @return proxy          - The address of the (possibly newly) deployed proxy.
     function initializeProxyWithoutSetup(
         address owner,
         address trustedExecutor,
         bytes32 salt,
         address setupTarget,
-        bytes calldata setupData
+        bytes calldata setupData,
+        Call[] calldata calls
     ) external returns (address proxy) {
         if (msg.sender != owner) {
             revert OnlyOwner();
         }
         proxy = proxyOf(owner, trustedExecutor, salt, setupTarget, setupData);
         if (proxy.code.length == 0) {
+            // to run `calls` as the shed, the factory has to hold a trusted role on it. It takes
+            // that role for the duration of this call only, and hands it over to the committed
+            // executor as the last thing it does.
+            bool takeTrustedRole = calls.length > 0;
             _deployPreconfiguredProxy(
-                owner, trustedExecutor, _setupSalt(owner, trustedExecutor, salt, setupTarget, setupData), proxy
+                owner,
+                takeTrustedRole ? address(this) : trustedExecutor,
+                _setupSalt(owner, trustedExecutor, salt, setupTarget, setupData),
+                proxy
             );
             emit SetupSkipped(owner, proxy, setupTarget);
+
+            if (takeTrustedRole) {
+                COWShed(payable(proxy)).trustedExecuteHooks(_withHandover(calls, proxy, trustedExecutor));
+            }
         }
+    }
+
+    /// @dev `calls` followed by a call handing the trusted role over to `trustedExecutor`, so the
+    ///      shed ends up in exactly the configuration its address commits to. Appended last and
+    ///      not allowed to fail, so no owner-supplied call can leave the factory trusted:
+    ///      `updateTrustedExecutor` is `onlySelf`, hence routed as a call from the shed itself.
+    function _withHandover(Call[] calldata calls, address proxy, address trustedExecutor)
+        internal
+        pure
+        returns (Call[] memory withHandover)
+    {
+        withHandover = new Call[](calls.length + 1);
+        for (uint256 i = 0; i < calls.length; i++) {
+            withHandover[i] = calls[i];
+        }
+        withHandover[calls.length] = Call({
+            target: proxy,
+            value: 0,
+            callData: abi.encodeCall(COWShed.updateTrustedExecutor, (trustedExecutor)),
+            allowFailure: false,
+            isDelegateCall: false
+        });
     }
 
     /// @dev create2 salt committing to the owner, trusted executor, user salt, and the setup call

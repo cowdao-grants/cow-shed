@@ -135,17 +135,6 @@ contract COWShedExecutorFactorySetupTest is BaseTest {
         assertEq(predicted.code.length, 0, "should not have deployed when setup reverts");
     }
 
-    /// @dev sign an `executeHooks` payload for an arbitrary (already deployed) shed.
-    function _signForShed(Call[] memory calls, bytes32 nonce, uint256 deadline, address shed)
-        internal
-        view
-        returns (bytes memory)
-    {
-        bytes32 digest = cproxy.hashToSign(calls, nonce, deadline, COWShed(payable(shed)).domainSeparator());
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(user.privateKey, digest);
-        return abi.encodePacked(r, s, v);
-    }
-
     function testOwnerCanRecoverFundsWhenSetupAlwaysReverts() external {
         RevertingSetup bad = new RevertingSetup();
         bytes memory data = hex"";
@@ -156,28 +145,101 @@ contract COWShedExecutorFactorySetupTest is BaseTest {
         vm.expectRevert(RevertingSetup.SetupBoom.selector);
         executorFactory.initializeProxyWithSetup(user.addr, address(routingExecutor), SALT, address(bad), data);
 
-        // the owner deploys the shed anyway, skipping the setup call
-        vm.expectEmit(true, true, true, true);
-        emit COWShedExecutorFactory.SetupSkipped(user.addr, predicted, address(bad));
-        vm.prank(user.addr);
-        address deployed =
-            executorFactory.initializeProxyWithoutSetup(user.addr, address(routingExecutor), SALT, address(bad), data);
-
-        assertEq(deployed, predicted, "deployed at unexpected address");
-        assertEq(COWShed(payable(deployed)).trustedExecutor(), address(routingExecutor), "executor not set");
-        assertEq(executorFactory.ownerOf(deployed), user.addr, "ownerOf not recorded");
-
-        // ... and sweeps the stranded funds out with a regular signed hook
+        // the owner deploys the shed anyway, skipping the setup call, and sweeps the stranded
+        // funds out in the same transaction
         address recipient = makeAddr("recipient");
         Call[] memory calls = new Call[](1);
         calls[0] =
             Call({target: recipient, value: 1 ether, callData: hex"", allowFailure: false, isDelegateCall: false});
-        bytes32 nonce = "rescue";
-        uint256 deadline = _deadline();
-        COWShed(payable(deployed)).executeHooks(calls, nonce, deadline, _signForShed(calls, nonce, deadline, deployed));
 
+        vm.expectEmit(true, true, true, true);
+        emit COWShedExecutorFactory.SetupSkipped(user.addr, predicted, address(bad));
+        vm.prank(user.addr);
+        address deployed = executorFactory.initializeProxyWithoutSetup(
+            user.addr, address(routingExecutor), SALT, address(bad), data, calls
+        );
+
+        assertEq(deployed, predicted, "deployed at unexpected address");
+        assertEq(executorFactory.ownerOf(deployed), user.addr, "ownerOf not recorded");
         assertEq(recipient.balance, 1 ether, "funds not recovered");
         assertEq(deployed.balance, 0, "shed should be drained");
+
+        // the factory only held the trusted role for the duration of the call: the shed ends up
+        // configured with the executor its address commits to
+        assertEq(COWShed(payable(deployed)).trustedExecutor(), address(routingExecutor), "executor not handed over");
+    }
+
+    function testRescueCallsRunAsTheShed() external {
+        bytes memory data = hex"";
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({
+            target: address(recorder),
+            value: 0,
+            callData: abi.encodeCall(Recorder.ping, ()),
+            allowFailure: false,
+            isDelegateCall: false
+        });
+
+        vm.prank(user.addr);
+        address deployed = executorFactory.initializeProxyWithoutSetup(
+            user.addr, address(routingExecutor), SALT, makeAddr("brokenSetup"), data, calls
+        );
+
+        assertEq(recorder.lastCaller(), deployed, "call did not run as the shed");
+        assertEq(recorder.pings(), 1, "recorder not pinged");
+        assertEq(COWShed(payable(deployed)).trustedExecutor(), address(routingExecutor), "executor not handed over");
+    }
+
+    function testRescueHandsOverExecutorEvenIfCallsChangeIt() external {
+        bytes memory data = hex"";
+        // a rescue call that points the shed at the caller's own executor. the appended handover
+        // runs last, so the shed still ends up with the committed executor.
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({
+            target: address(0), // patched below, needs the shed address
+            value: 0,
+            callData: abi.encodeCall(COWShed.updateTrustedExecutor, (makeAddr("hijacked"))),
+            allowFailure: false,
+            isDelegateCall: false
+        });
+        address predicted =
+            executorFactory.proxyOf(user.addr, address(routingExecutor), SALT, makeAddr("brokenSetup"), data);
+        calls[0].target = predicted;
+
+        vm.prank(user.addr);
+        address deployed = executorFactory.initializeProxyWithoutSetup(
+            user.addr, address(routingExecutor), SALT, makeAddr("brokenSetup"), data, calls
+        );
+
+        assertEq(deployed, predicted, "deployed at unexpected address");
+        assertEq(
+            COWShed(payable(deployed)).trustedExecutor(),
+            address(routingExecutor),
+            "committed executor must win over the rescue calls"
+        );
+    }
+
+    function testRescueRevertsIfACallReverts() external {
+        RevertingSetup bad = new RevertingSetup();
+        bytes memory data = hex"";
+        address predicted = executorFactory.proxyOf(user.addr, address(routingExecutor), SALT, address(bad), data);
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = Call({
+            target: address(bad),
+            value: 0,
+            callData: abi.encodeCall(ICOWShedSetup.setup, (predicted, user.addr, hex"")),
+            allowFailure: false,
+            isDelegateCall: false
+        });
+
+        vm.prank(user.addr);
+        vm.expectRevert(RevertingSetup.SetupBoom.selector);
+        executorFactory.initializeProxyWithoutSetup(
+            user.addr, address(routingExecutor), SALT, address(bad), data, calls
+        );
+
+        assertEq(predicted.code.length, 0, "should not have deployed when a rescue call reverts");
     }
 
     function testInitializeProxyWithoutSetupOnlyOwner() external {
@@ -188,7 +250,7 @@ contract COWShedExecutorFactorySetupTest is BaseTest {
         vm.prank(makeAddr("notTheOwner"));
         vm.expectRevert(COWShedExecutorFactory.OnlyOwner.selector);
         executorFactory.initializeProxyWithoutSetup(
-            user.addr, address(routingExecutor), SALT, address(routingExecutor), data
+            user.addr, address(routingExecutor), SALT, address(routingExecutor), data, new Call[](0)
         );
 
         assertEq(predicted.code.length, 0, "should not have deployed");
@@ -199,8 +261,11 @@ contract COWShedExecutorFactorySetupTest is BaseTest {
 
         vm.prank(user.addr);
         address deployed = executorFactory.initializeProxyWithoutSetup(
-            user.addr, address(routingExecutor), SALT, address(routingExecutor), data
+            user.addr, address(routingExecutor), SALT, address(routingExecutor), data, new Call[](0)
         );
+
+        // with no rescue calls the shed is initialized with the committed executor directly
+        assertEq(COWShed(payable(deployed)).trustedExecutor(), address(routingExecutor), "executor not set");
 
         // same address as the with-setup path, but the setup call never ran
         assertEq(
