@@ -85,11 +85,7 @@ contract COWShedWithExecutorSignerTest is BaseTest {
 
         Call[] memory calls = new Call[](1);
         calls[0] = Call({
-            target: makeAddr("sink"),
-            value: 0.1 ether,
-            callData: hex"",
-            allowFailure: false,
-            isDelegateCall: false
+            target: makeAddr("sink"), value: 0.1 ether, callData: hex"", allowFailure: false, isDelegateCall: false
         });
 
         vm.prank(address(executor));
@@ -112,8 +108,7 @@ contract COWShedWithExecutorSignerTest is BaseTest {
 
         address sink = makeAddr("sink");
         Call[] memory calls = new Call[](1);
-        calls[0] =
-            Call({target: sink, value: 0.2 ether, callData: hex"", allowFailure: false, isDelegateCall: false});
+        calls[0] = Call({target: sink, value: 0.2 ether, callData: hex"", allowFailure: false, isDelegateCall: false});
 
         bytes32 nonce = "1";
         bytes memory sig = _signForShed(proxy, calls, nonce, _deadline());
@@ -165,11 +160,7 @@ contract COWShedWithExecutorSignerTest is BaseTest {
     function testIsValidSignatureFailsClosedForEoaExecutor() external {
         address eoaExecutor = makeAddr("eoaExecutor");
         address proxy = executorFactory.initializeProxy(user.addr, eoaExecutor, SALT_A);
-        assertEq(
-            IERC1271(proxy).isValidSignature(keccak256("x"), hex""),
-            bytes4(0),
-            "EOA executor should fail closed"
-        );
+        assertEq(IERC1271(proxy).isValidSignature(keccak256("x"), hex""), bytes4(0), "EOA executor should fail closed");
     }
 
     // --- helpers -----------------------------------------------------------
