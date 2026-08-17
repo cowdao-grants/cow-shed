@@ -7,6 +7,10 @@ import {COWShedExecutorFactory} from "src/COWShedExecutorFactory.sol";
 import {CowShedHooksWrapper} from "src/CowShedHooksWrapper.sol";
 import {ICowSettlement} from "src/vendor/CowWrapper.sol";
 
+// Same salt as Deploy.s.sol, so the wrapper gets a deterministic CREATE2 address (and is picked up
+// by dev/generate-networks-file.sh, which only records CREATE2 deployments).
+bytes32 constant SALT = bytes32(0);
+
 /// @dev Deploys the enforceable-hooks wrapper. Kept separate from `Deploy.s.sol` so the shared test
 ///      deployment (BaseTest) does not construct a wrapper against a settlement with no code.
 ///      NOTE: the wrapper must be allowlisted as a CoW solver by governance before it can settle,
@@ -21,6 +25,6 @@ contract DeployHooksWrapperScript is Script {
         COWShedExecutorFactory factory = COWShedExecutorFactory(vm.envAddress("EXECUTOR_FACTORY"));
 
         vm.broadcast();
-        wrapper = new CowShedHooksWrapper(ICowSettlement(settlement), factory);
+        wrapper = new CowShedHooksWrapper{salt: SALT}(ICowSettlement(settlement), factory);
     }
 }
