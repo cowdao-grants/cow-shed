@@ -162,35 +162,23 @@ contract COWShedExecutorFactory is COWShedFactory {
     }
 
     /// @notice deploy a preconfigured proxy at its setup-committed address *without* running the
-    ///         committed setup call. Only callable by the shed owner.
-    /// @dev Last-resort recovery hatch. The address returned by `proxyOf(owner, trustedExecutor,
-    ///      salt, setupTarget, setupData)` can only ever be deployed by `initializeProxyWithSetup`,
-    ///      which reverts as a whole if the setup call reverts. If the setup call can never
-    ///      succeed (buggy or permanently reverting target, data that can never validate), any
-    ///      funds already sent to that counterfactual address would be stuck forever. This lets
-    ///      the owner deploy the shed anyway and recover them.
+    ///         committed setup call, and execute `calls` as the shed. Only callable by the owner.
+    /// @dev Last-resort recovery hatch: that address can otherwise only be deployed by
+    ///      `initializeProxyWithSetup`, so a setup call that can never succeed would strand any
+    ///      funds already sent there forever. Gating it on the owner keeps the setup path
+    ///      grief-free, and grants the owner nothing they don't already have as the proxy admin.
+    ///      Consumers must therefore not infer that the setup ran from the shed's address alone;
+    ///      watch `SetupSkipped`.
     ///
-    ///      Restricting this to `msg.sender == owner` preserves the grief-free property of the
-    ///      setup path: a third party still cannot deploy a shed at an address that commits to a
-    ///      setup call without running it. It also grants the owner nothing they don't already
-    ///      have, since the owner is the proxy admin and can `updateImplementation` on any shed
-    ///      they own.
-    ///
-    ///      Callers relying on the setup having run must therefore not infer it from the shed's
-    ///      address alone; watch for `SetupSkipped` (or check the setup target's own state).
-    ///
-    ///      `calls` runs as the shed in the same transaction, so the owner can deploy and empty a
-    ///      stranded shed atomically. That matters beyond convenience: the committed
-    ///      `trustedExecutor` cannot be swapped out (it is part of the address), so it gains its
-    ///      trusted role the moment the shed exists. Sweeping in a separate transaction would
-    ///      leave a window for it to drain the shed first.
+    ///      `calls` runs in the same transaction because the committed `trustedExecutor` cannot be
+    ///      swapped out for the rescue and is trusted the moment the shed exists: sweeping
+    ///      separately would leave it a window to drain the shed first.
     /// @param owner           - The owner/admin of the proxy. Must be the caller.
     /// @param trustedExecutor - The trusted executor the proxy ends up configured with.
     /// @param salt            - Arbitrary salt to allow multiple proxies per (owner, executor).
     /// @param setupTarget     - The setup target committed into the address, *not* called.
     /// @param setupData       - The setup data committed into the address, *not* used.
-    /// @param calls           - Calls to execute as the shed right after deploying it, e.g. to
-    ///                          withdraw stranded funds. May be empty.
+    /// @param calls           - Calls to execute as the shed, e.g. to withdraw stranded funds.
     /// @return proxy          - The address of the (possibly newly) deployed proxy.
     function initializeProxyWithoutSetup(
         address owner,
@@ -205,9 +193,8 @@ contract COWShedExecutorFactory is COWShedFactory {
         }
         proxy = proxyOf(owner, trustedExecutor, salt, setupTarget, setupData);
         if (proxy.code.length == 0) {
-            // to run `calls` as the shed, the factory has to hold a trusted role on it. It takes
-            // that role for the duration of this call only, and hands it over to the committed
-            // executor as the last thing it does.
+            // to run `calls` as the shed, the factory has to hold a trusted role on it, which it
+            // hands over to the committed executor as the last thing it does.
             bool takeTrustedRole = calls.length > 0;
             _deployPreconfiguredProxy(
                 owner,
