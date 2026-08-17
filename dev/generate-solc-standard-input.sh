@@ -26,5 +26,7 @@ require_installed forge
 
 generate_standard_json_input COWShed
 generate_standard_json_input COWShedForComposableCoW
+generate_standard_json_input COWShedWithExecutorSigner
 generate_standard_json_input COWShedProxy
 generate_standard_json_input COWShedFactory
+generate_standard_json_input COWShedExecutorFactory

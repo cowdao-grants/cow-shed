@@ -18,12 +18,7 @@ contract COWShedWithExecutorSigner is COWShed, IERC1271 {
     ///      (returns `bytes4(0)`) when the executor is unset or an EOA, since an EOA
     ///      cannot implement EIP-1271. The executor may implement any policy it likes,
     ///      including an owner-signature fallback.
-    function isValidSignature(bytes32 hash, bytes calldata signature)
-        external
-        view
-        override
-        returns (bytes4)
-    {
+    function isValidSignature(bytes32 hash, bytes calldata signature) external view override returns (bytes4) {
         address executor = _state().trustedExecutor;
         if (executor.code.length == 0) {
             return bytes4(0);

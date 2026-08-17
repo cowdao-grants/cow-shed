@@ -95,8 +95,7 @@ contract COWShedExecutorFactorySetupTest is BaseTest {
         bytes memory dataA = _pingData(0);
         bytes memory dataB = abi.encode(makeAddr("other"), uint256(0), bytes(""));
 
-        address a =
-            executorFactory.proxyOf(user.addr, address(routingExecutor), SALT, address(routingExecutor), dataA);
+        address a = executorFactory.proxyOf(user.addr, address(routingExecutor), SALT, address(routingExecutor), dataA);
         // different setup data -> different address
         address diffData =
             executorFactory.proxyOf(user.addr, address(routingExecutor), SALT, address(routingExecutor), dataB);
@@ -134,6 +133,90 @@ contract COWShedExecutorFactorySetupTest is BaseTest {
 
         // nothing was deployed, so the deployment can be retried
         assertEq(predicted.code.length, 0, "should not have deployed when setup reverts");
+    }
+
+    /// @dev sign an `executeHooks` payload for an arbitrary (already deployed) shed.
+    function _signForShed(Call[] memory calls, bytes32 nonce, uint256 deadline, address shed)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 digest = cproxy.hashToSign(calls, nonce, deadline, COWShed(payable(shed)).domainSeparator());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(user.privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function testOwnerCanRecoverFundsWhenSetupAlwaysReverts() external {
+        RevertingSetup bad = new RevertingSetup();
+        bytes memory data = hex"";
+        address predicted = executorFactory.proxyOf(user.addr, address(routingExecutor), SALT, address(bad), data);
+
+        // funds land at the counterfactual address, but the setup call can never succeed
+        vm.deal(predicted, 1 ether);
+        vm.expectRevert(RevertingSetup.SetupBoom.selector);
+        executorFactory.initializeProxyWithSetup(user.addr, address(routingExecutor), SALT, address(bad), data);
+
+        // the owner deploys the shed anyway, skipping the setup call
+        vm.expectEmit(true, true, true, true);
+        emit COWShedExecutorFactory.SetupSkipped(user.addr, predicted, address(bad));
+        vm.prank(user.addr);
+        address deployed =
+            executorFactory.initializeProxyWithoutSetup(user.addr, address(routingExecutor), SALT, address(bad), data);
+
+        assertEq(deployed, predicted, "deployed at unexpected address");
+        assertEq(COWShed(payable(deployed)).trustedExecutor(), address(routingExecutor), "executor not set");
+        assertEq(executorFactory.ownerOf(deployed), user.addr, "ownerOf not recorded");
+
+        // ... and sweeps the stranded funds out with a regular signed hook
+        address recipient = makeAddr("recipient");
+        Call[] memory calls = new Call[](1);
+        calls[0] =
+            Call({target: recipient, value: 1 ether, callData: hex"", allowFailure: false, isDelegateCall: false});
+        bytes32 nonce = "rescue";
+        uint256 deadline = _deadline();
+        COWShed(payable(deployed)).executeHooks(calls, nonce, deadline, _signForShed(calls, nonce, deadline, deployed));
+
+        assertEq(recipient.balance, 1 ether, "funds not recovered");
+        assertEq(deployed.balance, 0, "shed should be drained");
+    }
+
+    function testInitializeProxyWithoutSetupOnlyOwner() external {
+        bytes memory data = _pingData(0);
+        address predicted =
+            executorFactory.proxyOf(user.addr, address(routingExecutor), SALT, address(routingExecutor), data);
+
+        vm.prank(makeAddr("notTheOwner"));
+        vm.expectRevert(COWShedExecutorFactory.OnlyOwner.selector);
+        executorFactory.initializeProxyWithoutSetup(
+            user.addr, address(routingExecutor), SALT, address(routingExecutor), data
+        );
+
+        assertEq(predicted.code.length, 0, "should not have deployed");
+    }
+
+    function testInitializeProxyWithoutSetupDoesNotRunSetup() external {
+        bytes memory data = _pingData(0);
+
+        vm.prank(user.addr);
+        address deployed = executorFactory.initializeProxyWithoutSetup(
+            user.addr, address(routingExecutor), SALT, address(routingExecutor), data
+        );
+
+        // same address as the with-setup path, but the setup call never ran
+        assertEq(
+            deployed,
+            executorFactory.proxyOf(user.addr, address(routingExecutor), SALT, address(routingExecutor), data),
+            "deployed at unexpected address"
+        );
+        assertEq(routingExecutor.setupCount(), 0, "setup should not have run");
+        assertEq(recorder.pings(), 0, "recorder should not have been pinged");
+
+        // the with-setup path is now a no-op on the same address, it does not re-run the setup
+        address again = executorFactory.initializeProxyWithSetup(
+            user.addr, address(routingExecutor), SALT, address(routingExecutor), data
+        );
+        assertEq(again, deployed, "should return the same proxy");
+        assertEq(routingExecutor.setupCount(), 0, "setup should still not have run");
     }
 
     function testSetupCanSpendPreFundedEth() external {

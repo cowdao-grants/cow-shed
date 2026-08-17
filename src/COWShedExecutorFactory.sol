@@ -16,6 +16,12 @@ import {ICOWShedSetup} from "./ICOWShedSetup.sol";
 ///      (`proxyOf(address)` / `initializeProxy(address)` / `executeHooks(...)`) is inherited
 ///      unchanged; this contract only adds the preconfigured-executor overloads.
 contract COWShedExecutorFactory is COWShedFactory {
+    error OnlyOwner();
+
+    /// @notice emitted when the owner deploys a shed at its setup-committed address without
+    ///         running the committed setup call.
+    event SetupSkipped(address indexed owner, address indexed shed, address setupTarget);
+
     constructor(address impl) COWShedFactory(impl) {}
 
     /// @notice deterministic address for a proxy preconfigured with a specific trusted executor
@@ -33,7 +39,11 @@ contract COWShedExecutorFactory is COWShedFactory {
         return address(
             uint160(
                 uint256(
-                    keccak256(abi.encodePacked(hex"ff", address(this), _create2Salt(owner, trustedExecutor, salt), initCodeHash))
+                    keccak256(
+                        abi.encodePacked(
+                            hex"ff", address(this), _create2Salt(owner, trustedExecutor, salt), initCodeHash
+                        )
+                    )
                 )
             )
         );
@@ -48,12 +58,7 @@ contract COWShedExecutorFactory is COWShedFactory {
     function initializeProxy(address owner, address trustedExecutor, bytes32 salt) public returns (address proxy) {
         proxy = proxyOf(owner, trustedExecutor, salt);
         if (proxy.code.length == 0) {
-            new COWShedProxy{salt: _create2Salt(owner, trustedExecutor, salt)}(implementation, owner);
-            COWShed(payable(proxy)).initialize(trustedExecutor);
-            emit COWShedBuilt(owner, proxy);
-
-            // set reverse mapping of proxy to owner
-            ownerOf[proxy] = owner;
+            _deployPreconfiguredProxy(owner, trustedExecutor, _create2Salt(owner, trustedExecutor, salt), proxy);
         }
     }
 
@@ -78,6 +83,20 @@ contract COWShedExecutorFactory is COWShedFactory {
     ///      never collide with the base per-owner salt `bytes32(uint256(uint160(owner)))`.
     function _create2Salt(address owner, address trustedExecutor, bytes32 salt) internal pure returns (bytes32) {
         return keccak256(abi.encode(owner, trustedExecutor, salt));
+    }
+
+    /// @dev deploy and initialize a preconfigured proxy at `proxy`, which the caller must have
+    ///      derived from `create2Salt`. Callers are responsible for the "not already deployed"
+    ///      check.
+    function _deployPreconfiguredProxy(address owner, address trustedExecutor, bytes32 create2Salt, address proxy)
+        internal
+    {
+        new COWShedProxy{salt: create2Salt}(implementation, owner);
+        COWShed(payable(proxy)).initialize(trustedExecutor);
+        emit COWShedBuilt(owner, proxy);
+
+        // set reverse mapping of proxy to owner
+        ownerOf[proxy] = owner;
     }
 
     // --- deploy-time setup call --------------------------------------------------------------
@@ -133,17 +152,54 @@ contract COWShedExecutorFactory is COWShedFactory {
     ) public returns (address proxy) {
         proxy = proxyOf(owner, trustedExecutor, salt, setupTarget, setupData);
         if (proxy.code.length == 0) {
-            new COWShedProxy{salt: _setupSalt(owner, trustedExecutor, salt, setupTarget, setupData)}(
-                implementation, owner
+            _deployPreconfiguredProxy(
+                owner, trustedExecutor, _setupSalt(owner, trustedExecutor, salt, setupTarget, setupData), proxy
             );
-            COWShed(payable(proxy)).initialize(trustedExecutor);
-            emit COWShedBuilt(owner, proxy);
-
-            // set reverse mapping of proxy to owner
-            ownerOf[proxy] = owner;
 
             // run the one-time setup call, passing the deployed proxy address to the target
             ICOWShedSetup(setupTarget).setup(proxy, owner, setupData);
+        }
+    }
+
+    /// @notice deploy a preconfigured proxy at its setup-committed address *without* running the
+    ///         committed setup call. Only callable by the shed owner.
+    /// @dev Last-resort recovery hatch. The address returned by `proxyOf(owner, trustedExecutor,
+    ///      salt, setupTarget, setupData)` can only ever be deployed by `initializeProxyWithSetup`,
+    ///      which reverts as a whole if the setup call reverts. If the setup call can never
+    ///      succeed (buggy or permanently reverting target, data that can never validate), any
+    ///      funds already sent to that counterfactual address would be stuck forever. This lets
+    ///      the owner deploy the shed anyway and recover them.
+    ///
+    ///      Restricting this to `msg.sender == owner` preserves the grief-free property of the
+    ///      setup path: a third party still cannot deploy a shed at an address that commits to a
+    ///      setup call without running it. It also grants the owner nothing they don't already
+    ///      have, since the owner is the proxy admin and can `updateImplementation` on any shed
+    ///      they own.
+    ///
+    ///      Callers relying on the setup having run must therefore not infer it from the shed's
+    ///      address alone; watch for `SetupSkipped` (or check the setup target's own state).
+    /// @param owner           - The owner/admin of the proxy. Must be the caller.
+    /// @param trustedExecutor - The trusted executor the proxy is initialized with.
+    /// @param salt            - Arbitrary salt to allow multiple proxies per (owner, executor).
+    /// @param setupTarget     - The setup target committed into the address, *not* called.
+    /// @param setupData       - The setup data committed into the address, *not* used.
+    /// @return proxy          - The address of the (possibly newly) deployed proxy.
+    function initializeProxyWithoutSetup(
+        address owner,
+        address trustedExecutor,
+        bytes32 salt,
+        address setupTarget,
+        bytes calldata setupData
+    ) external returns (address proxy) {
+        if (msg.sender != owner) {
+            revert OnlyOwner();
+        }
+        proxy = proxyOf(owner, trustedExecutor, salt, setupTarget, setupData);
+        if (proxy.code.length == 0) {
+            _deployPreconfiguredProxy(
+                owner, trustedExecutor, _setupSalt(owner, trustedExecutor, salt, setupTarget, setupData), proxy
+            );
+            emit SetupSkipped(owner, proxy, setupTarget);
         }
     }
 
