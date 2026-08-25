@@ -37,8 +37,8 @@
       "transactionHash": "0x409827f798120c1e68837464d3ad4b5d31a25c6cd00cc66ba410416d81cdc385"
     },
     "59144": {
-      "address": "0xa2704cf562ad418bf0453f4b662ebf6a2489ed88",
-      "transactionHash": "0x72bf72a698a419297ac7df4b97d33efda3218a60b1ddf621eafbf8ef1111ac2f"
+      "address": "0xf0d586ab0017fdfe2acf4ab008b3ddb2cf50bb09",
+      "transactionHash": "0xae3cdfe0656fb2f47e403007065606e4d982fafae9fabf7bb27e99a2ba0743d2"
     },
     "8453": {
       "address": "0xa2704cf562ad418bf0453f4b662ebf6a2489ed88",
@@ -87,8 +87,8 @@
       "transactionHash": "0x76d25671fd1c31044a6cf481df15649fc3503cf5a492de92be8601fee02e259f"
     },
     "59144": {
-      "address": "0x312f92fe5f1710408b20d52a374fa29e099cfa86",
-      "transactionHash": "0xad527499a510773fed02f46787d8ed9190d52fe40997c661353805e2bc056a65"
+      "address": "0xc94f7d71d022e773b0b516841ff867c06f39726b",
+      "transactionHash": "0x17ca8252e6ac7597834afac2784fa24e4784931e81be9514da7c622f063db853"
     },
     "8453": {
       "address": "0x312f92fe5f1710408b20d52a374fa29e099cfa86",
@@ -123,6 +123,10 @@
     "43114": {
       "address": "0x5e284e80f3bd6a7d80a8500d9c49878028110848",
       "transactionHash": "0x57862484b54f810e7b48795ff529bb0ce2087025992bd36e5405147977186dbc"
+    },
+    "59144": {
+      "address": "0x5e284e80f3bd6a7d80a8500d9c49878028110848",
+      "transactionHash": "0x60182b26ccb71cad18e182dbb1266185ff606dc5d061f7d6643fc3f87e352672"
     }
   },
   "COWShedForComposableCoW": {
@@ -149,6 +153,10 @@
     "43114": {
       "address": "0xf0d400089d5b9faca64e3422ad6614546587cffb",
       "transactionHash": "0x8384b918ed5bf22528f3f4aa063ec8b06b40cba5d0e58f482acf625fdef48499"
+    },
+    "59144": {
+      "address": "0xf0d400089d5b9faca64e3422ad6614546587cffb",
+      "transactionHash": "0x22b44509da7c6f0f7f8b48b88a571768a6db110973a0bb9e1572b7e7033c86d8"
     }
   }
 }
