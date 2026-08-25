@@ -31,6 +31,8 @@ contract DeployTest is Test {
         address officialFactoryAddress = 0xC94F7D71d022e773B0B516841ff867C06f39726B;
         address officialCowShedForComposableCoWAddress = 0xF0D400089d5b9fACA64E3422AD6614546587cfFB;
         address officialFactoryForComposableCoWAddress = 0x5E284e80F3bd6A7D80A8500D9c49878028110848;
+        address officialCowShedWithExecutorSignerAddress = 0x1c4b988481d945c98a21446AB2960000d290aB22;
+        address officialFactoryForExecutorSignerAddress = 0xD4B9497f258bf63A7f21d1DEAF26dA2F23e4DC99;
 
         DeployScript.Deployment memory deployment = script.deploy();
 
@@ -45,6 +47,47 @@ contract DeployTest is Test {
             address(deployment.factoryForComposableCoW),
             officialFactoryForComposableCoWAddress,
             "incorrect deployment address for COWShedFactory for ComposableCoW"
+        );
+        assertEq(
+            address(deployment.cowShedWithExecutorSigner),
+            officialCowShedWithExecutorSignerAddress,
+            "incorrect deployment address for COWShedWithExecutorSigner"
+        );
+        assertEq(
+            address(deployment.factoryForExecutorSigner),
+            officialFactoryForExecutorSignerAddress,
+            "incorrect deployment address for COWShedExecutorFactory"
+        );
+    }
+
+    /// @dev The script skips contracts that are already deployed at their deterministic address,
+    /// so it can be replayed on a chain holding only part of the set instead of aborting with a
+    /// create collision on the first one. Deploying twice must be a no-op the second time.
+    function testSkipsAlreadyDeployedContracts() external {
+        DeployScript.Deployment memory first = script.deploy();
+        DeployScript.Deployment memory second = script.deploy();
+
+        assertEq(address(second.cowShed), address(first.cowShed), "COWShed redeployed");
+        assertEq(
+            address(second.cowShedForComposableCoW),
+            address(first.cowShedForComposableCoW),
+            "COWShedForComposableCoW redeployed"
+        );
+        assertEq(
+            address(second.cowShedWithExecutorSigner),
+            address(first.cowShedWithExecutorSigner),
+            "COWShedWithExecutorSigner redeployed"
+        );
+        assertEq(address(second.factory), address(first.factory), "COWShedFactory redeployed");
+        assertEq(
+            address(second.factoryForComposableCoW),
+            address(first.factoryForComposableCoW),
+            "COWShedFactory for ComposableCoW redeployed"
+        );
+        assertEq(
+            address(second.factoryForExecutorSigner),
+            address(first.factoryForExecutorSigner),
+            "COWShedExecutorFactory redeployed"
         );
     }
 
