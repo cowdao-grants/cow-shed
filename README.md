@@ -116,6 +116,8 @@ This file is generated automatically using the broadcast files in the `broadcast
 
 Most of the deployments are done using the `forge` script as described in this README, however, some networks might be deployed in some other way (like replaying the creation code and constructor arguments). For these, we will need to manually update the file `broadcast/networks-manual.json`.
 
+Entries in that file are merged on top of whatever the broadcast files produce, so they survive regeneration. Editing `networks.json` directly does not: the next regeneration overwrites it. The file is currently empty, since every network is covered by a broadcast file.
+
 To regenerate the file after a new deployment, run the following command:
 
 ```sh

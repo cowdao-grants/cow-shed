@@ -20,10 +20,6 @@
       "address": "0xf0d586ab0017fdfe2acf4ab008b3ddb2cf50bb09",
       "transactionHash": "0xaf0393bdbdba229f927e9b25947a425bc5046b33bf5084b7108a9b99a883b182"
     },
-    "232": {
-      "address": "0xa2704cF562AD418Bf0453F4B662ebf6A2489eD88",
-      "transactionHash": "0x74a283f97c35c844e36f0c3353ec40d0012032721f72ded5b783938aff8e98e8"
-    },
     "42161": {
       "address": "0xf0d586ab0017fdfe2acf4ab008b3ddb2cf50bb09",
       "transactionHash": "0xb87ec80fb9bdbef84e2ce198a697f3c3f4951c4411a029c6840770b76d117adc"
@@ -83,10 +79,6 @@
     "137": {
       "address": "0xc94f7d71d022e773b0b516841ff867c06f39726b",
       "transactionHash": "0xd8fe5804b39cc3ae7b1e610daf2b43e40515a5d657b3e7b77bf0a2da27fc04a3"
-    },
-    "232": {
-      "address": "0x312f92fe5f1710408B20D52A374fa29e099cFA86",
-      "transactionHash": "0x53df62bc122ecb5bfa9770776bb54b3a81e5f7238e4b02c52ac7000eb36c86bd"
     },
     "42161": {
       "address": "0xc94f7d71d022e773b0b516841ff867c06f39726b",
