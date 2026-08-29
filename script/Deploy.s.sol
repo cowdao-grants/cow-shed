@@ -6,6 +6,7 @@ import {Script} from "forge-std/Script.sol";
 import {COWShed, COWShedFactory} from "src/COWShedFactory.sol";
 
 import {COWShedForComposableCoW} from "src/COWShedForComposableCoW.sol";
+import {COWShedWithMerkleSigner} from "src/COWShedWithMerkleSigner.sol";
 import {IComposableCow} from "src/IComposableCow.sol";
 
 bytes32 constant SALT = bytes32(0);
@@ -17,8 +18,10 @@ contract DeployScript is Script {
     struct Deployment {
         COWShed cowShed;
         COWShed cowShedForComposableCoW;
+        COWShed cowShedWithMerkleSigner;
         COWShedFactory factory;
         COWShedFactory factoryForComposableCoW;
+        COWShedFactory factoryWithMerkleSigner;
     }
 
     function run() external virtual {
@@ -37,6 +40,10 @@ contract DeployScript is Script {
         vm.broadcast();
         COWShed cowShedForComposableCoW = new COWShedForComposableCoW{salt: SALT}(composableCoW);
 
+        // Deploy COWShed that validates orders via an owner-signed merkle root
+        vm.broadcast();
+        COWShed cowShedWithMerkleSigner = new COWShedWithMerkleSigner{salt: SALT}();
+
         // Deploy factory
         vm.broadcast();
         COWShedFactory factory = new COWShedFactory{salt: SALT}(address(cowShed));
@@ -45,11 +52,17 @@ contract DeployScript is Script {
         vm.broadcast();
         COWShedFactory factoryForComposableCoW = new COWShedFactory{salt: SALT}(address(cowShedForComposableCoW));
 
+        // Deploy factory
+        vm.broadcast();
+        COWShedFactory factoryWithMerkleSigner = new COWShedFactory{salt: SALT}(address(cowShedWithMerkleSigner));
+
         return Deployment({
             cowShed: cowShed,
             cowShedForComposableCoW: cowShedForComposableCoW,
+            cowShedWithMerkleSigner: cowShedWithMerkleSigner,
             factory: factory,
-            factoryForComposableCoW: factoryForComposableCoW
+            factoryForComposableCoW: factoryForComposableCoW,
+            factoryWithMerkleSigner: factoryWithMerkleSigner
         });
     }
 }
