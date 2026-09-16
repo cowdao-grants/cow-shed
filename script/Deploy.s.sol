@@ -25,13 +25,9 @@ contract DeployScript is Script {
         deploy();
     }
 
-    /// @dev Every contract here is deployed with `CREATE2` and a fixed salt, so its address is
-    /// known upfront and is the same on every chain. A chain may already hold some of them: when
-    /// only part of the code changes, the untouched contracts keep their address and are still
-    /// deployed from the previous run. Redeploying those would revert with a create collision and
-    /// take the whole script down with it, so each contract is deployed only if its address is
-    /// still empty and reused otherwise. The script is therefore idempotent: rerunning it on a
-    /// fully deployed chain broadcasts nothing and just reports the addresses.
+    /// @dev Contracts are deployed with `CREATE2` and a fixed salt, so their addresses are known
+    /// upfront. Deploying one the chain already has would revert with a create collision, so each
+    /// is deployed only if its address is still empty and reused otherwise.
     function deploy() public returns (Deployment memory) {
         // Deploy COWShed
         COWShed cowShed = COWShed(payable(create2Address(type(COWShed).creationCode)));

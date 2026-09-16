@@ -53,9 +53,8 @@ contract DeployTest is Test {
         );
     }
 
-    /// @dev Only part of the code changes between most releases, so a chain commonly already
-    /// holds some of these contracts at their deterministic addresses. Deploying those again
-    /// would revert with a create collision, so the script must reuse them instead.
+    /// @dev Most releases change only part of the code, leaving a chain with contracts that
+    /// must be reused rather than deployed again.
     function testReusesAlreadyDeployedContracts() external {
         DeployScript.Deployment memory first = script.deploy();
         DeployScript.Deployment memory second = script.deploy();
@@ -66,8 +65,7 @@ contract DeployTest is Test {
         assertEq(address(second.factoryForComposableCoW), address(first.factoryForComposableCoW));
     }
 
-    /// @dev The case that motivates the check: the shed implementations are untouched and already
-    /// live, only the factories are new.
+    /// @dev The case that motivates the check: only the factories are new.
     function testDeploysFactoriesOntoExistingImplementations() external {
         address expectedCowShedAddress = vm.computeCreate2Address(SALT, keccak256(type(COWShed).creationCode));
         vm.etch(expectedCowShedAddress, address(new COWShed()).code);
