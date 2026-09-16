@@ -124,6 +124,15 @@ export class CowShedSdk {
     ]);
   }
 
+  /**
+   * Encodes a call that deploys the caller's proxy if needed and executes the
+   * hooks on it, without a signature. The transaction must be sent by the proxy
+   * owner, since the proxy is derived from `msg.sender`.
+   */
+  static encodeExecuteOwnHooksForFactory(calls: ICall[]) {
+    return FACTORY_INTERFACE.encodeFunctionData("executeOwnHooks", [calls]);
+  }
+
   static encodeExecuteHooksForProxy(
     calls: ICall[],
     nonce: string,

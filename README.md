@@ -35,6 +35,32 @@ nonces will save some gas.**
 The system also support smart contracts. In case of contracts, EIP1271 signatures are used to
 authenticate the signed hooks.
 
+### Executing hooks on your own shed
+
+Signed hooks are the right tool when someone else submits the transaction, for instance the CoW
+Protocol settlement contract executing pre/post hooks. When the shed owner submits the transaction
+themselves, a signature is redundant, and `COWShed.trustedExecuteHooks` lets the owner execute hooks
+directly without one.
+
+That entry point is unusable for a shed that hasn't been deployed yet: a freshly initialized shed
+only trusts its owner and the factory, so nothing can both deploy the shed and call
+`trustedExecuteHooks` on it in the same transaction.
+
+[`COWShedFactory.executeOwnHooks`](./src/COWShedFactory.sol) closes that gap. It deploys the
+caller's shed if needed, forwards any `msg.value` to it, and executes the hooks using the factory's
+trusted executor role:
+
+```solidity
+// deploys the shed on first use, then runs the hooks on it
+factory.executeOwnHooks{value: msg.value}(calls);
+```
+
+The proxy is derived from `msg.sender`, so a caller can only ever execute hooks on the shed it owns.
+No nonce is consumed and no deadline is checked, because there is no signed message to replay.
+
+If the caller previously moved the trusted executor of its shed away from the factory, this reverts
+with `OnlyTrustedRole`; such a caller should call `COWShed.trustedExecuteHooks` on the shed directly.
+
 ## Usage
 
 ### Deployments
