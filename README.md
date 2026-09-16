@@ -99,13 +99,16 @@ forge build
 
 #### 2. Validate the deterministic addresses
 
-You can simulate the deployment on a network where the contracts aren't present yet with the following command.
+You can simulate the deployment on a network with the following command.
 
 ```shell
 forge script 'script/Deploy.s.sol:DeployScript' --sig "run()" --rpc-url "$RPC_URL" -vvvv
 ```
 
-If running on a network where the contracts are already deployed, the script is expected to revert.
+The script is idempotent. Contracts are deployed with `create2` and a fixed salt, so their addresses
+are known upfront; each one is deployed only if its address is still empty. A release that changes
+only part of the code therefore deploys only what actually changed, and rerunning on a fully
+deployed network broadcasts nothing and just reports the addresses.
 
 You can also run the script without the `--rpc-url` parameter to see the expected deployment addresses.
 
@@ -122,9 +125,10 @@ forge script 'script/Deploy.s.sol:DeployScript' --sig "run()" --rpc-url "$RPC_UR
 ```shell
 export ETHERSCAN_API_KEY='your API key here' # required only for etherscan based explorers
 
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x62d3a7ff48f9ae1c28a9552a055482f8c63787f8 COWShed --guess-constructor-args
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x4f4350bf2c74aacd508d598a1ba94ef84378793d COWShedFactory --guess-constructor-args
-forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x6773d5aa31a1ead34127d564d6e258e66254ebdb COWShedForComposableCoW --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0xf0d586ab0017fdfe2acf4ab008b3ddb2cf50bb09 COWShed --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0xf0d400089d5b9faca64e3422ad6614546587cffb COWShedForComposableCoW --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x0a654985c5856ab562237286f36d55c0ff637213 COWShedFactory --guess-constructor-args
+forge verify-contract --verifier etherscan --watch --rpc-url "$RPC_URL" 0x221c28ec177cf7da6f837dfd0052ba8f265fb4ca COWShedFactory --guess-constructor-args
 ```
 
 If this doesn't work, visit the block explorer web interface for each of the deployed contract and manually verify through the interface.

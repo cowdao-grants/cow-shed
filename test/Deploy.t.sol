@@ -53,6 +53,36 @@ contract DeployTest is Test {
         );
     }
 
+    /// @dev Only part of the code changes between most releases, so a chain commonly already
+    /// holds some of these contracts at their deterministic addresses. Deploying those again
+    /// would revert with a create collision, so the script must reuse them instead.
+    function testReusesAlreadyDeployedContracts() external {
+        DeployScript.Deployment memory first = script.deploy();
+        DeployScript.Deployment memory second = script.deploy();
+
+        assertEq(address(second.cowShed), address(first.cowShed));
+        assertEq(address(second.cowShedForComposableCoW), address(first.cowShedForComposableCoW));
+        assertEq(address(second.factory), address(first.factory));
+        assertEq(address(second.factoryForComposableCoW), address(first.factoryForComposableCoW));
+    }
+
+    /// @dev The case that motivates the check: the shed implementations are untouched and already
+    /// live, only the factories are new.
+    function testDeploysFactoriesOntoExistingImplementations() external {
+        address expectedCowShedAddress = vm.computeCreate2Address(SALT, keccak256(type(COWShed).creationCode));
+        vm.etch(expectedCowShedAddress, address(new COWShed()).code);
+
+        DeployScript.Deployment memory deployment = script.deploy();
+
+        assertEq(address(deployment.cowShed), expectedCowShedAddress);
+        assertEq(
+            address(deployment.factory),
+            vm.computeCreate2Address(SALT, keccak256(factoryCreationCode(expectedCowShedAddress)))
+        );
+        assertGt(address(deployment.factory).code.length, 0, "factory was not deployed");
+        assertEq(deployment.factory.implementation(), expectedCowShedAddress);
+    }
+
     function factoryCreationCode(address cowShed) internal pure returns (bytes memory) {
         return abi.encodePacked(type(COWShedFactory).creationCode, abi.encode(cowShed));
     }
