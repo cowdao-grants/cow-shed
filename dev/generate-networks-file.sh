@@ -5,14 +5,9 @@ set -o errexit -o pipefail -o nounset
 repo_root_dir="$(git rev-parse --show-toplevel)"
 manual_file="$repo_root_dir/broadcast/networks-manual.json"
 
-# Collect every address ever deployed as `COWShedForComposableCoW`, per chain.
-#
-# The factory disambiguation further down needs these. Looking only at the run being processed
-# is not enough: when a release changes just the factory, the implementations keep their
-# deterministic addresses and are already live, so that run deploys the two factories alone and
-# carries no `COWShedForComposableCoW` transaction to match against. Addresses are collected
-# across all runs of a chain, and kept as a list because a chain can have held more than one
-# implementation over time.
+# Collect the `COWShedForComposableCoW` addresses of each chain, used to tell the two factories
+# apart below. Every run of the chain is scanned, because a run that deploys only the factories
+# has no such transaction of its own.
 composable_sheds=$(for deployment in "$repo_root_dir/broadcast/"*"/"*"/"*".json"; do
   chain_id=${deployment%/*}
   chain_id=${chain_id##*/}
@@ -44,11 +39,9 @@ done | sort -n -k1,1 | cut -f2- | while IFS= read -r deployment; do
 
   # Extract contract info per chain.
   #
-  # `Deploy.s.sol` deploys `COWShedFactory` twice: once for the plain shed and once for the
-  # Composable CoW one. Both carry the same `contractName`, so without disambiguation the
-  # second silently overwrites the first and one factory address is lost. A factory whose
-  # constructor argument is a `COWShedForComposableCoW` known on that chain is therefore
-  # recorded under its own name.
+  # `Deploy.s.sol` deploys `COWShedFactory` twice, for the plain shed and the Composable CoW
+  # one, and both carry the same `contractName`. Without disambiguation the second overwrites
+  # the first, so a factory built on a `COWShedForComposableCoW` gets its own name.
   jq --arg chainId "$chain_id" --argjson composableSheds "$composable_sheds" '
     ($composableSheds[$chainId] // []) as $composableShedsForChain
     | [.transactions[] | select(.transactionType == "CREATE2") | select(.hash != null)][]
