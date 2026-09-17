@@ -44,7 +44,7 @@ directly without one.
 
 That entry point is unusable for a shed that hasn't been deployed yet: a freshly initialized shed
 only trusts its owner and the factory, so nothing can both deploy the shed and call
-`trustedExecuteHooks` on it in the same transaction.
+`trustedExecuteHooks` on it in the same transaction from an EOA.
 
 [`COWShedFactory.executeOwnHooks`](./src/COWShedFactory.sol) closes that gap. It deploys the
 caller's shed if needed, forwards any `msg.value` to it, and executes the hooks using the factory's
