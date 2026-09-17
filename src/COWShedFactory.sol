@@ -9,6 +9,7 @@ contract COWShedFactory {
     error InvalidSignature();
     error NoCodeAtImplementation();
     error NonceAlreadyUsed();
+    error ProxyFundingFailed();
 
     event COWShedBuilt(address user, address shed);
 
@@ -31,8 +32,9 @@ contract COWShedFactory {
 
     /// @notice deploy user proxy if not already deployed.
     /// @param user    - User to deploy the proxy for.
-    function initializeProxy(address user) external {
-        address proxy = proxyOf(user);
+    /// @return proxy  - The deterministic address of the user proxy.
+    function initializeProxy(address user) external returns (address proxy) {
+        proxy = proxyOf(user);
         _initializeProxy(user, proxy);
     }
 
@@ -53,6 +55,43 @@ contract COWShedFactory {
         // execute the hooks, the authorization checks are implemented in the
         // COWShed.executeHooks function
         COWShed(payable(proxy)).executeHooks(calls, nonce, deadline, signature);
+    }
+
+    /// @notice execute hooks on the caller's own proxy, without a signature.
+    /// @dev Will deploy and initialize the caller's proxy at a deterministic address if one
+    ///      doesn't already exist, optionally fund it with `msg.value`, and then execute the
+    ///      hooks through this factory's trusted executor role.
+    ///
+    ///      Authorization is the caller itself: the proxy is derived from `msg.sender`, so a
+    ///      caller can only ever execute hooks on the proxy it owns. No nonce is consumed and
+    ///      no deadline is checked, since there is no signed message that could be replayed.
+    ///
+    ///      This exists because a freshly initialized proxy only trusts its owner and this
+    ///      factory, which makes it impossible to deploy a proxy and call
+    ///      `COWShed.trustedExecuteHooks` on it in a single transaction from an EOA.
+    ///
+    ///      Reverts with `COWShed.OnlyTrustedRole` if the caller has an existing proxy whose
+    ///      trusted executor was moved away from this factory. Such a caller is expected to
+    ///      call `COWShed.trustedExecuteHooks` on its proxy directly.
+    /// @param calls   - The hooks to execute on the caller's proxy.
+    /// @return proxy  - The address of the caller's proxy.
+    function executeOwnHooks(Call[] calldata calls) external payable returns (address proxy) {
+        proxy = proxyOf(msg.sender);
+        // initialize the proxy
+        _initializeProxy(msg.sender, proxy);
+
+        // fund the proxy so that the hooks can spend native tokens that weren't in the proxy
+        // before this transaction
+        if (msg.value > 0) {
+            (bool success,) = proxy.call{value: msg.value}("");
+            if (!success) {
+                revert ProxyFundingFailed();
+            }
+        }
+
+        // execute the hooks; this factory is the trusted executor of every proxy it
+        // initializes, and the caller is the owner of `proxy` by construction
+        COWShed(payable(proxy)).trustedExecuteHooks(calls);
     }
 
     /// @notice returns the address where the user proxy will get deployed. It is deterministic
