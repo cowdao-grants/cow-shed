@@ -53,6 +53,34 @@ contract DeployTest is Test {
         );
     }
 
+    /// @dev Most releases change only part of the code, leaving a chain with contracts that
+    /// must be reused rather than deployed again.
+    function testReusesAlreadyDeployedContracts() external {
+        DeployScript.Deployment memory first = script.deploy();
+        DeployScript.Deployment memory second = script.deploy();
+
+        assertEq(address(second.cowShed), address(first.cowShed));
+        assertEq(address(second.cowShedForComposableCoW), address(first.cowShedForComposableCoW));
+        assertEq(address(second.factory), address(first.factory));
+        assertEq(address(second.factoryForComposableCoW), address(first.factoryForComposableCoW));
+    }
+
+    /// @dev The case that motivates the check: only the factories are new.
+    function testDeploysFactoriesOntoExistingImplementations() external {
+        address expectedCowShedAddress = vm.computeCreate2Address(SALT, keccak256(type(COWShed).creationCode));
+        vm.etch(expectedCowShedAddress, address(new COWShed()).code);
+
+        DeployScript.Deployment memory deployment = script.deploy();
+
+        assertEq(address(deployment.cowShed), expectedCowShedAddress);
+        assertEq(
+            address(deployment.factory),
+            vm.computeCreate2Address(SALT, keccak256(factoryCreationCode(expectedCowShedAddress)))
+        );
+        assertGt(address(deployment.factory).code.length, 0, "factory was not deployed");
+        assertEq(deployment.factory.implementation(), expectedCowShedAddress);
+    }
+
     function factoryCreationCode(address cowShed) internal pure returns (bytes memory) {
         return abi.encodePacked(type(COWShedFactory).creationCode, abi.encode(cowShed));
     }

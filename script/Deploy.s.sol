@@ -25,25 +25,45 @@ contract DeployScript is Script {
         deploy();
     }
 
+    /// @dev Contracts are deployed with `CREATE2` and a fixed salt, so their addresses are known
+    /// upfront. Deploying one the chain already has would revert with a create collision, so each
+    /// is deployed only if its address is still empty and reused otherwise.
     function deploy() public returns (Deployment memory) {
         // Deploy COWShed
-        vm.broadcast();
-        COWShed cowShed = new COWShed{salt: SALT}();
+        COWShed cowShed = COWShed(payable(create2Address(type(COWShed).creationCode)));
+        if (address(cowShed).code.length == 0) {
+            vm.broadcast();
+            new COWShed{salt: SALT}();
+        }
 
         // Deploy COWShed with support for Composable CoW
         IComposableCow composableCoW =
             IComposableCow(address(vm.envOr("COMPOSABLE_COW", address(DEFAULT_COMPOSABLE_COW))));
 
-        vm.broadcast();
-        COWShed cowShedForComposableCoW = new COWShedForComposableCoW{salt: SALT}(composableCoW);
+        COWShed cowShedForComposableCoW = COWShed(
+            payable(create2Address(
+                    abi.encodePacked(type(COWShedForComposableCoW).creationCode, abi.encode(composableCoW))
+                ))
+        );
+        if (address(cowShedForComposableCoW).code.length == 0) {
+            vm.broadcast();
+            new COWShedForComposableCoW{salt: SALT}(composableCoW);
+        }
 
         // Deploy factory
-        vm.broadcast();
-        COWShedFactory factory = new COWShedFactory{salt: SALT}(address(cowShed));
+        COWShedFactory factory = COWShedFactory(create2Address(factoryCreationCode(address(cowShed))));
+        if (address(factory).code.length == 0) {
+            vm.broadcast();
+            new COWShedFactory{salt: SALT}(address(cowShed));
+        }
 
         // Deploy factory
-        vm.broadcast();
-        COWShedFactory factoryForComposableCoW = new COWShedFactory{salt: SALT}(address(cowShedForComposableCoW));
+        COWShedFactory factoryForComposableCoW =
+            COWShedFactory(create2Address(factoryCreationCode(address(cowShedForComposableCoW))));
+        if (address(factoryForComposableCoW).code.length == 0) {
+            vm.broadcast();
+            new COWShedFactory{salt: SALT}(address(cowShedForComposableCoW));
+        }
 
         return Deployment({
             cowShed: cowShed,
@@ -51,5 +71,13 @@ contract DeployScript is Script {
             factory: factory,
             factoryForComposableCoW: factoryForComposableCoW
         });
+    }
+
+    function create2Address(bytes memory creationCode) internal pure returns (address) {
+        return vm.computeCreate2Address(SALT, keccak256(creationCode));
+    }
+
+    function factoryCreationCode(address implementation) internal pure returns (bytes memory) {
+        return abi.encodePacked(type(COWShedFactory).creationCode, abi.encode(implementation));
     }
 }
