@@ -5,7 +5,9 @@ import {Script} from "forge-std/Script.sol";
 
 import {COWShed, COWShedFactory} from "src/COWShedFactory.sol";
 
+import {COWShedExecutorFactory} from "src/COWShedExecutorFactory.sol";
 import {COWShedForComposableCoW} from "src/COWShedForComposableCoW.sol";
+import {COWShedWithExecutorSigner} from "src/COWShedWithExecutorSigner.sol";
 import {IComposableCow} from "src/IComposableCow.sol";
 
 bytes32 constant SALT = bytes32(0);
@@ -17,8 +19,10 @@ contract DeployScript is Script {
     struct Deployment {
         COWShed cowShed;
         COWShed cowShedForComposableCoW;
+        COWShed cowShedWithExecutorSigner;
         COWShedFactory factory;
         COWShedFactory factoryForComposableCoW;
+        COWShedExecutorFactory factoryForExecutorSigner;
     }
 
     function run() external virtual {
@@ -50,6 +54,10 @@ contract DeployScript is Script {
             new COWShedForComposableCoW{salt: SALT}(composableCoW);
         }
 
+        // Deploy COWShed variant that delegates EIP-1271 signature validation to its trusted executor
+        vm.broadcast();
+        COWShed cowShedWithExecutorSigner = new COWShedWithExecutorSigner{salt: SALT}();
+
         // Deploy factory
         COWShedFactory factory = COWShedFactory(create2Address(factoryCreationCode(address(cowShed))));
         if (address(factory).code.length == 0) {
@@ -65,11 +73,19 @@ contract DeployScript is Script {
             new COWShedFactory{salt: SALT}(address(cowShedForComposableCoW));
         }
 
+        // Deploy factory for the executor-signer variant. Integrations use its
+        // (owner, trustedExecutor, salt) overloads to deploy preconfigured proxies.
+        vm.broadcast();
+        COWShedExecutorFactory factoryForExecutorSigner =
+            new COWShedExecutorFactory{salt: SALT}(address(cowShedWithExecutorSigner));
+
         return Deployment({
             cowShed: cowShed,
             cowShedForComposableCoW: cowShedForComposableCoW,
+            cowShedWithExecutorSigner: cowShedWithExecutorSigner,
             factory: factory,
-            factoryForComposableCoW: factoryForComposableCoW
+            factoryForComposableCoW: factoryForComposableCoW,
+            factoryForExecutorSigner: factoryForExecutorSigner
         });
     }
 
