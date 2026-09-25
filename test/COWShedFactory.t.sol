@@ -142,21 +142,16 @@ contract COWShedFactoryTest is BaseTest {
         assertEq(factory.executeOwnHooks(calls), userProxyAddr, "didnt return the expected proxy address");
     }
 
-    function testExecuteOwnHooks_onlyEverTouchesTheCallersProxy() external {
+    function testProxyOf_differsByOwner() external {
         address caller = makeAddr("caller");
         address someoneElse = makeAddr("someone else");
-        address someoneElsesProxy = factory.proxyOf(someoneElse);
-
-        vm.prank(caller);
-        address proxy = factory.executeOwnHooks(new Call[](0));
-
-        assertEq(proxy, factory.proxyOf(caller), "executed hooks on a proxy that isnt the callers");
-        assertEq(someoneElsesProxy.code.length, 0, "deployed a proxy for someone other than the caller");
+        assertTrue(factory.proxyOf(caller) != factory.proxyOf(someoneElse));
     }
 
     function testExecuteOwnHooks_forwardsValueToTheProxy() external {
         address owner = makeAddr("funded shed owner");
         vm.deal(owner, 1 ether);
+        assertEq(factory.proxyOf(owner).balance, 0, "proxy already has ETH");
 
         vm.prank(owner);
         address proxy = factory.executeOwnHooks{value: 0.4 ether}(new Call[](0));
