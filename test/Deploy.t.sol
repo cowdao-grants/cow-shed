@@ -27,11 +27,6 @@ contract DeployTest is Test {
     function testMatchesOfficialAddresses() external {
         // These addresses are expected to change only if the contract code
         // changes.
-        //
-        // NOTE: the factory addresses below changed because `COWShedFactory` gained new
-        // entry points. Since `COWShedFactory.proxyOf` derives the proxy address from
-        // `address(this)`, every user proxy moves to a new address on the new factory.
-        // See the migration notes in the pull request that introduced this change.
         address officialCowShedAddress = 0xF0D586aB0017fDfE2ACf4AB008B3Ddb2CF50bB09;
         address officialFactoryAddress = 0x0a654985c5856Ab562237286f36d55c0FF637213;
         address officialCowShedForComposableCoWAddress = 0xF0D400089d5b9fACA64E3422AD6614546587cfFB;

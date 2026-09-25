@@ -63,16 +63,11 @@ contract COWShedFactory {
     ///      hooks through this factory's trusted executor role.
     ///
     ///      Authorization is the caller itself: the proxy is derived from `msg.sender`, so a
-    ///      caller can only ever execute hooks on the proxy it owns. No nonce is consumed and
-    ///      no deadline is checked, since there is no signed message that could be replayed.
+    ///      caller can only ever execute hooks on the proxy it owns.
     ///
     ///      This exists because a freshly initialized proxy only trusts its owner and this
     ///      factory, which makes it impossible to deploy a proxy and call
     ///      `COWShed.trustedExecuteHooks` on it in a single transaction from an EOA.
-    ///
-    ///      Reverts with `COWShed.OnlyTrustedRole` if the caller has an existing proxy whose
-    ///      trusted executor was moved away from this factory. Such a caller is expected to
-    ///      call `COWShed.trustedExecuteHooks` on its proxy directly.
     /// @param calls   - The hooks to execute on the caller's proxy.
     /// @return proxy  - The address of the caller's proxy.
     function executeOwnHooks(Call[] calldata calls) external payable returns (address proxy) {
